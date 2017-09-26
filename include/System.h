@@ -11,7 +11,7 @@
 #include <thread>
 #include <opencv2/core/core.hpp>
 
-#include "../include /Tracking.h"
+#include "Tracking.h"
 
 using namespace std;
 

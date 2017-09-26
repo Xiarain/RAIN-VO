@@ -25,9 +25,9 @@ public:
         end = std::chrono::system_clock::now();
 
         // the past time between the Tic and Toc
-        std::chrono::duration_cast<double> elapsed_seconds = end -start;
+        std::chrono::duration<double> elapsed_seconds = end - start;
 
-        return (elapsed_seconds.count() * 1000);
+        return elapsed_seconds.count() * 1000;
     }
 
 private:

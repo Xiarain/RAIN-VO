@@ -5,7 +5,7 @@
 
 #include<fstream>
 
-#include "../include /System.h"
+#include "System.h"
 
 #include <opencv2/highgui/highgui.hpp>
 

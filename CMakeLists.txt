@@ -5,7 +5,7 @@ set( CMAKE_CXX_FLAGS "-std=c++11" )
 
 project(RAIN-VIO)
 
-set(OpenCV_DIR "/home/rain/workspace/Library/opencv/release")
+set(OpenCV_DIR "/home/rain/workspace/Library/opencv3/share/OpenCV")
 #set(Eigen3_DIR "/home/rain/workspace/Library/eigen3")
 
 
@@ -24,6 +24,7 @@ include_directories( "/usr/include/eigen3/")
 
 include_directories(
     include
+    ../include
     ${Opencv_INCLUDE_DIRS}
     ${CERES_INCLUDE_DIRS}
 )
@@ -39,7 +40,7 @@ add_executable(VIO
     src/System.cpp
     src/KeyFrame.cpp
     src/Tracking.cpp
-)
+        src/Camera.cpp include/Camera.h)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}

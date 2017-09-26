@@ -26,12 +26,12 @@ public:
 
     cv::Mat ProcessImage(const cv::Mat &im, const double &timestamp);
 
-    void DetectKeyPoint(const cv::Mat &image);
+    void DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds);
 
     void DeleteErrStatus(vector<cv::Point2f> &v, vector<uchar> status);
     void DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar> status);
     bool inBorder(const cv::Point2f &pt);
-    void addPoints();
+    void RejectWithF(void);
 
     enum eTrackingState {
         NO_INITIALIZED = 0,
@@ -43,6 +43,7 @@ public:
     cv::Mat mImage;
     cv::Mat mNextImage;
     cv::Mat mPreImage;
+    cv::Mat mCurImage;
 
     bool EQUALIZE;
     cv::Mat CmaeraK;
@@ -52,9 +53,9 @@ public:
     double ImageGridHeight;
     double ImageGridWidth;
 
-    cv::Mat prev_img, cur_img, forw_img;
-    vector<cv::Point2f> prev_pts, cur_pts, forw_pts;
-    vector<cv::Point2f> n_pts;
+//    cv::Mat prev_img, cur_img, forw_img;
+//    vector<cv::Point2f> prev_pts, cur_pts, forw_pts;
+//    vector<cv::Point2f> n_pts;
 
     int firstflag;
     list< cv::Point2f > keypoints;
@@ -63,21 +64,17 @@ private:
 
     bool mbFirstImage;
     double mFirstImageTime;
+    int numFeatures;
     vector<cv::KeyPoint> mvKeyPoints;
     vector<cv::KeyPoint> mvPreKeyPoints;
 
-    vector<cv::Point2f> mvKeyPointspts;
-    vector<cv::Point2f> mvPreKeyPointspts;
+    vector<cv::Point2f> mvPointsPts;
+    vector<cv::Point2f> mvPrePointsPts;
+    vector<cv::Point2f> mvCurPointsPts;
+    vector<cv::Point2f> mvNextPointsPts;
 
 
+}; // class Tracking
 
-
-
-//public:
-
-
-
-};
-
-}
+} // namespce RAIN_VIO
 #endif //RAIN_VIO_TRACKING_H

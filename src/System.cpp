@@ -2,7 +2,7 @@
 // Created by rain on 17-9-18.
 //
 
-#include "../include /System.h"
+#include "System.h"
 
 
 #include <opencv2/opencv.hpp>
