@@ -147,7 +147,7 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
     }
 
     // reject some points by the fundamental matrix
-    RejectWithF();
+//    RejectWithF();
 
     mPreImage = mNextImage;
     mvPrePointsPts = mvNextPointsPts;
@@ -188,7 +188,7 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
 {
     vector<cv::KeyPoint> vKeyPoints;
 
-#if 1
+#if 0
     int x0;
     int y0;
     // the maximun number of feature to retatin: 500
@@ -221,17 +221,11 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
         }
 
 
-    int k = 0;
     for (auto Points : mvNextKeyPoints)
     {
         int ceilx = ceil(static_cast<double>(Points.pt.x/CellSize));
         int ceily = ceil(static_cast<double>(Points.pt.y/CellSize));
 
-//        if (Points.response > GridOccupancy[ceily][ceilx])
-//        {
-//            GridOccupancy[ceily][ceilx] = Points.response;
-//            GridKeyPoint[ceily][ceilx] = Points;
-//        }
         if (Points.response > Grids[ceilx + ceily*GridnRows].response)
         {
             // the coordinate of the keypoint
@@ -239,11 +233,11 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
             Grids[ceilx + ceily*GridnRows].y = Points.pt.y;
             Grids[ceilx + ceily*GridnRows].response = Points.response;
 
-            k++;
-            mvNextKeyPoints[k] = Points;
+//            k++;
+//            mvNextKeyPoints[k] = Points;
         }
     }
-    mvNextKeyPoints.resize(k);
+//    mvNextKeyPoints.resize(k);
 
     // detect the ORB keypoint
     for (int i = 0; i < GridnRows; i++) // y
@@ -277,12 +271,33 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
         return a.response > b.response;
     });
 
+    int k = 0;
+    for (auto keypoint : vKeyPoints)
+    {
+        int ceilx = ceil(static_cast<double>(keypoint.pt.x/CellSize));
+        int ceily = ceil(static_cast<double>(keypoint.pt.y/CellSize));
+
+        if (keypoint.response > Grids[ceilx + ceily*GridnRows].response)
+        {
+            // the coordinate of the keypoint
+            Grids[ceilx + ceily*GridnRows].x = keypoint.pt.x;
+            Grids[ceilx + ceily*GridnRows].y = keypoint.pt.y;
+            Grids[ceilx + ceily*GridnRows].response = keypoint.response;
+
+            vKeyPoints[k++] = keypoint;
+        }
+    }
+
+    vKeyPoints.resize(k);
+
     int count = 0;
     for (auto KeyPoints : mvKeyPoints)
     {
         mvPointsPts.push_back(KeyPoints.pt);
 
         count++;
+
+        // in order to constrain the number of the keypoints
         if (!(count < numFeatureNeeds))
         {
             mvKeyPoints.resize(count);
@@ -293,7 +308,7 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
 #endif
 
 #if 0
-    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 30, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
+    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 50, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
     ORBDetctor->detect(image, mvKeyPoints);
 
     for (auto KeyPoints : mvKeyPoints)
@@ -317,31 +332,51 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     }
 #endif
 
-//    const int CellSize = 30;
-//    int GridnCols = ceil(static_cast<double>(ImageWidth / CellSize));
-//    int GridnRows = ceil(static_cast<double>(ImageHeight / CellSize));
-//
-//    vector<float > GridOccupancy;
-//    GridOccupancy.resize(GridnCols*GridnRows);
-//
-//    fill(GridOccupancy.begin(), GridOccupancy.end(), 0);
-//
-//    int i = 0;
-//
-//    for (auto KeyPoints : mvKeyPoints)
-//    {
-//        const int k = static_cast<int> (KeyPoints.pt.y/CellSize)*GridnCols + static_cast<int>(KeyPoints.pt.x/CellSize);
-//
-//        if (KeyPoints.response > GridOccupancy[k])
-//        {
+    const int CellSize = 50;
+    int GridnCols = ceil(static_cast<double>(ImageWidth / CellSize));
+    int GridnRows = ceil(static_cast<double>(ImageHeight / CellSize));
+
+    vector<float > GridOccupancy;
+    GridOccupancy.resize(GridnCols*GridnRows);
+
+    fill(GridOccupancy.begin(), GridOccupancy.end(), 0);
+
+    for (auto Points : mvNextKeyPoints)
+    {
+        int ceilx = ceil(static_cast<double>(Points.pt.x/CellSize));
+        int ceily = ceil(static_cast<double>(Points.pt.y/CellSize));
+
+        if (Points.response > Grids[ceilx + ceily*GridnRows].response)
+        {
+            GridOccupancy[ceilx + ceily*GridnRows] = Points.response;
+
+        }
+    }
+
+    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 50, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
+    ORBDetctor->detect(image, mvKeyPoints);
+
+    int i = 0;
+
+    for (auto KeyPoints : mvKeyPoints)
+    {
+        const int k = static_cast<int> (KeyPoints.pt.y/CellSize)*GridnCols + static_cast<int>(KeyPoints.pt.x/CellSize);
+
+        if (!(GridOccupancy[k]>0))
+        {
 //            GridOccupancy[k] = KeyPoints.response;
-//
-//            mvKeyPoints[i++] = KeyPoints;
-//        }
-//
-//    }
-//
-//    mvKeyPoints.resize(i);
+
+            mvKeyPoints[i++] = KeyPoints;
+        }
+
+    }
+
+    mvKeyPoints.resize(i);
+
+    for (auto KeyPoints : mvKeyPoints)
+    {
+        mvPointsPts.push_back(KeyPoints.pt);
+    }
 
 
 }
