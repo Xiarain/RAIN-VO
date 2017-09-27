@@ -10,11 +10,32 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
+#include "Camera.h"
 
 using namespace std;
 
 namespace RAIN_VIO
 {
+
+class Camera;
+
+struct Grid
+{
+    int x;
+    int y;
+    float response;
+    cv::KeyPoint keypoint;
+
+    // constructed function
+    Grid()
+    {
+        x = 0;
+        y = 0;
+        response = 0;
+    }
+};
+
+
 
 class Tracking
 {
@@ -23,6 +44,7 @@ class Tracking
 public:
 
     Tracking(const string &strSettingsFile);
+    ~Tracking();
 
     cv::Mat ProcessImage(const cv::Mat &im, const double &timestamp);
 
@@ -32,6 +54,8 @@ public:
     void DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar> status);
     bool inBorder(const cv::Point2f &pt);
     void RejectWithF(void);
+
+    Camera *mcamera;
 
     enum eTrackingState {
         NO_INITIALIZED = 0,
@@ -52,6 +76,7 @@ public:
     double ImageWidth;
     double ImageGridHeight;
     double ImageGridWidth;
+    vector<Grid> Grids;
 
 //    cv::Mat prev_img, cur_img, forw_img;
 //    vector<cv::Point2f> prev_pts, cur_pts, forw_pts;
@@ -67,6 +92,8 @@ private:
     int numFeatures;
     vector<cv::KeyPoint> mvKeyPoints;
     vector<cv::KeyPoint> mvPreKeyPoints;
+    vector<cv::KeyPoint> mvNextKeyPoints;
+    vector<cv::KeyPoint> mvCurKeyPoints;
 
     vector<cv::Point2f> mvPointsPts;
     vector<cv::Point2f> mvPrePointsPts;

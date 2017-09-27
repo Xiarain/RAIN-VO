@@ -19,6 +19,7 @@ Tracking::Tracking(const string &strSettingsFile)
     mbFirstImage = true;
     mFirstImageTime = 0;
 
+    mcamera = new Camera(strSettingsFile);
 
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
 
@@ -30,16 +31,15 @@ Tracking::Tracking(const string &strSettingsFile)
 
     CmaeraK = cv::Mat::eye(3, 3, CV_32F);
     CmaeraK.at<float>(0, 0) = fsSettings["Camera.fx"];
-    CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
+CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
     CmaeraK.at<float>(0, 2) = fsSettings["Camera.cx"];
     CmaeraK.at<float>(1, 2) = fsSettings["Camera.cy"];
 
     DistCoef = cv::Mat::zeros(4, 1, CV_32F);
-    float temp = fsSettings["Camera.k1"];
-    DistCoef.at<float>(0, 0) = fsSettings["Camera.k1"];
-    DistCoef.at<float>(1, 0) = fsSettings["Camera.k2"];
-    DistCoef.at<float>(2, 0) = fsSettings["Camera.p1"];
-    DistCoef.at<float>(3, 0) = fsSettings["Camera.p2"];
+    DistCoef.at<float>(0) = fsSettings["Camera.k1"];
+    DistCoef.at<float>(1) = fsSettings["Camera.k2"];
+    DistCoef.at<float>(2) = fsSettings["Camera.p1"];
+    DistCoef.at<float>(3) = fsSettings["Camera.p2"];
 
     ImageHeight = fsSettings["Camera.height"];
     ImageWidth = fsSettings["Camera.width"];
@@ -50,6 +50,11 @@ Tracking::Tracking(const string &strSettingsFile)
     numFeatures = fsSettings["ORBextractor.numFeatures"];
 
     firstflag = 1;
+}
+
+Tracking::~Tracking()
+{
+    delete(mcamera);
 }
 
 cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
@@ -93,7 +98,7 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
 
     // the feature number should be stained in a certain number
     // so the number is too few, it should detect more feature point, if not, the new feature point should been discarded.
-    int n_max_cnt = numFeatures - static_cast<int>(mvNextPointsPts.size());
+    int n_max_cnt = numFeatures - static_cast<int>(mvCurPointsPts.size());
     if (n_max_cnt > 0)
     {
 
@@ -105,13 +110,17 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
         cv::goodFeaturesToTrack(mNextImage, mvPointsPts, n_max_cnt, 0.1, 30, cv::Mat(ImageHeight, ImageWidth, CV_8UC1, cv::Scalar(255)));
 #endif
 
-        cout << timefeature.toc() << " ";
+        cout << " the time of the detect the feature point:" << timefeature.toc() << endl;
 
     }
     else
+    {
         mvPointsPts.clear();
+        mvKeyPoints.clear();
+    }
 
     mvNextPointsPts.clear();
+    mvNextKeyPoints.clear();
 
     // 上一幅图像中的2D特征点已经找到了
     if (mvCurPointsPts.size() > 0)
@@ -128,32 +137,39 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
                 status[i] = 0;
 
         DeleteErrStatus(mvPrePointsPts, status);
+        DeleteErrStatus(mvPreKeyPoints, status);
 
         DeleteErrStatus(mvCurPointsPts, status);
+        DeleteErrStatus(mvCurKeyPoints, status);
 
         DeleteErrStatus(mvNextPointsPts, status);
-
+        DeleteErrStatus(mvNextKeyPoints, status);
     }
 
-    // add the new feature point to the next feature vector
-    for (auto &p : mvPointsPts)
-    {
-        mvNextPointsPts.push_back(p);
-
-    }
-
-//    RejectWithF();
-
-    mvPointsPts.clear();
+    // reject some points by the fundamental matrix
+    RejectWithF();
 
     mPreImage = mNextImage;
     mvPrePointsPts = mvNextPointsPts;
+    mvPreKeyPoints = mvNextKeyPoints;
 
     mCurImage = mNextImage;
     mvCurPointsPts = mvNextPointsPts;
+    mvCurKeyPoints = mvNextKeyPoints;
 
+    // add the new feature point to the next feature vector
+    for (auto p : mvPointsPts)
+    {
+        mvCurPointsPts.push_back(p);
+    }
 
+    for (auto KeyPoint : mvKeyPoints)
+    {
+        mvCurKeyPoints.push_back(KeyPoint);
+    }
 
+    mvPointsPts.clear();
+    mvKeyPoints.clear();
 
     for (int i = 0; i < mvNextPointsPts.size(); i++)
     {
@@ -164,7 +180,6 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
 
     cv::imshow("", ImageShow);
     cv::waitKey(20);
-
 
     return cv::Mat::eye(4, 4, CV_32F);
 }
@@ -185,33 +200,50 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     // Harris algorithm is used to rank features:
     // size of the patch used by the oriented BRIEF descriptor: 31
     // fastThreshold 20
-    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(1, 1.2, 2, 10, 0, 2, cv::ORB::FAST_SCORE, 20, 10);
+    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(1, 1.2, 3, 15, 0, 2, cv::ORB::FAST_SCORE, 20, 30);
 
-    const int CellSize = 50;
+    const int CellSize = 70;
     const int GridnCols = ceil(static_cast<double>(ImageWidth/CellSize)); // 26
     const int GridnRows = ceil(static_cast<double>(ImageHeight/CellSize)); // 16
 
-//    vector<bool> GridOccupancy;
-    bool GridOccupancy[GridnRows][GridnCols];
+
+    vector<vector<cv::KeyPoint> > GridKeyPoint(GridnCols);
+
+    Grids.resize(GridnRows*GridnCols);
 
     for (int i = 0; i < GridnRows; i++)
         for (int j = 0; j < GridnCols; j++)
         {
-            GridOccupancy[i][j] = false;
+//            GridOccupancy[i][j] = 0;
+            Grids[j + i*GridnRows].x = i;
+            Grids[j + i*GridnRows].y = j;
+            Grids[j + i*GridnRows].response = 0;
         }
 
-//    GridOccupancy.resize(GridnCols*GridnRows);
 
-//    fill(GridOccupancy.begin(), GridOccupancy.end(), false);
-
-    for (auto Points : mvNextPointsPts)
+    int k = 0;
+    for (auto Points : mvNextKeyPoints)
     {
-        int ceilx = ceil(static_cast<double>(Points.x/CellSize));
-        int ceily = ceil(static_cast<double>(Points.y/CellSize));
+        int ceilx = ceil(static_cast<double>(Points.pt.x/CellSize));
+        int ceily = ceil(static_cast<double>(Points.pt.y/CellSize));
 
-//        GridOccupancy[ceily*GridnCols + ceilx] = true;
-        GridOccupancy[ceily][ceilx] = true;
+//        if (Points.response > GridOccupancy[ceily][ceilx])
+//        {
+//            GridOccupancy[ceily][ceilx] = Points.response;
+//            GridKeyPoint[ceily][ceilx] = Points;
+//        }
+        if (Points.response > Grids[ceilx + ceily*GridnRows].response)
+        {
+            // the coordinate of the keypoint
+            Grids[ceilx + ceily*GridnRows].x = Points.pt.x;
+            Grids[ceilx + ceily*GridnRows].y = Points.pt.y;
+            Grids[ceilx + ceily*GridnRows].response = Points.response;
+
+            k++;
+            mvNextKeyPoints[k] = Points;
+        }
     }
+    mvNextKeyPoints.resize(k);
 
     // detect the ORB keypoint
     for (int i = 0; i < GridnRows; i++) // y
@@ -224,7 +256,7 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
             x0 = j*CellSize;
             y0 = i*CellSize;
 
-            if (!GridOccupancy[i][j])
+            if (!(Grids[j + i*GridnRows].response > 0))
             {
                 ORBDetctor->detect(image(cv::Rect(x0, y0, CellSize, CellSize)), vKeyPoints);
 
@@ -239,7 +271,6 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
             else
                 vKeyPoints.clear();
         }
-
     // sort the keypoints, find the high response of the keypoint
     sort(vKeyPoints.begin(), vKeyPoints.end(), [](const cv::KeyPoint &a, const cv::KeyPoint &b)
     {
@@ -250,6 +281,7 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     for (auto KeyPoints : mvKeyPoints)
     {
         mvPointsPts.push_back(KeyPoints.pt);
+
         count++;
         if (!(count < numFeatureNeeds))
         {
@@ -355,6 +387,68 @@ void Tracking::RejectWithF(void)
     vunNextPointsPts.resize(vunPrePointsPts.size());
     vunPrePointsPts.resize(vunPrePointsPts.size());
 
+// OpenCV Fundamental matrix
+#if 0
+    // Fill matrix with points
+    if (vunPrePointsPts.size() > 8)
+    {
+        cv::Mat mat(vunPrePointsPts.size(),2,CV_32F);
+        for(int i = 0; i < vunPrePointsPts.size(); i++)
+        {
+            mat.at<float>(i,0) = vunPrePointsPts[i].x;
+            mat.at<float>(i,1) = vunPrePointsPts[i].y;
+
+//            cout << vunPrePointsPts[i].x << " " << vunPrePointsPts[i].y << endl;
+        }
+        mat=mat.reshape(2);
+        cv::undistortPoints(mat, mat, CmaeraK, DistCoef, cv::Mat(), CmaeraK);
+        mat=mat.reshape(1);
+        cout << "after undistortion" << endl;
+
+        for (int i = 0; i <vunPrePointsPts.size(); i++)
+        {
+            vunPrePointsPts[i].x = mat.at<float>(i,0);
+            vunPrePointsPts[i].y = mat.at<float>(i,1);
+
+//            cout << vunPrePointsPts[i].x << " " << vunPrePointsPts[i].y << endl;
+        }
+
+        for(int i = 0; i < vunNextPointsPts.size(); i++)
+        {
+            mat.at<float>(i,0) = vunNextPointsPts[i].x;
+            mat.at<float>(i,1) = vunNextPointsPts[i].y;
+        }
+        mat=mat.reshape(2);
+        cv::undistortPoints(mat, mat, CmaeraK, DistCoef, cv::Mat(), CmaeraK);
+        mat=mat.reshape(1);
+
+        for (int i = 0; i <vunNextPointsPts.size(); i++)
+        {
+            vunNextPointsPts[i].x = (int)mat.at<float>(i,0);
+            vunNextPointsPts[i].y = (int)mat.at<float>(i,1);
+        }
+    }
+
+#else
+
+    const double FOCAL_LENGTH = 460.0;
+
+    for (int i = 0; i < vunPrePointsPts.size(); i++)
+    {
+        Eigen::Vector3d tmpP;
+
+        mcamera->LiftProjective(Eigen::Vector2d(vunPrePointsPts[i].x, vunPrePointsPts[i].y), tmpP);
+        tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
+        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageWidth/2.0;
+        vunPrePointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
+
+        mcamera->LiftProjective(Eigen::Vector2d(vunNextPointsPts[i].x, vunNextPointsPts[i].y), tmpP);
+        tmpP[0]  = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
+        tmpP[1]  = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageWidth/2.0;
+        vunNextPointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
+    }
+
+#endif
     // the solution of the fundamental matrix needs eight points
     if (mvNextPointsPts.size() > 8 && mvPrePointsPts.size() > 8)
     {

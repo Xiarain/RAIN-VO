@@ -30,7 +30,6 @@ Camera::Camera(const string &strSettingsFile)
 
     mImageHeight = fsSettings["Camera.height"];
     mImageWidth = fsSettings["Camera.width"];
-
 }
 
 /**
@@ -38,7 +37,7 @@ Camera::Camera(const string &strSettingsFile)
  * @param p the point of the normalized coordinate
  * @param pCorrected the point have been corrected
  */
-void Camera::Distortion(const Eigen::Vector2d & p, Eigen::Vector2d & pCorrected)
+void Camera::Distortion(const Eigen::Vector2d & p, Eigen::Vector2d & du)
 {
     double x2, y2, xy, r2, rad_dist;
 
@@ -50,9 +49,45 @@ void Camera::Distortion(const Eigen::Vector2d & p, Eigen::Vector2d & pCorrected)
     // NOTICE: there is no 1, because this calculation is the corrected number, not the corrected point.
     rad_dist = mk1*r2 + mk2*r2*r2;
 
-    pCorrected[0] = p[0]*rad_dist + 2.0*mp1*xy + mp2*(r2 + 2.0*x2);
-    pCorrected[1] = p[1]*rad_dist + 2.0*mp2*xy + mp1*(r2 + 2.0*y2);
+    du[0] = p[0]*rad_dist + 2.0*mp1*xy + mp2*(r2 + 2.0*x2);
+    du[1] = p[1]*rad_dist + 2.0*mp2*xy + mp1*(r2 + 2.0*y2);
 }
+
+void Camera::LiftProjective(const Eigen::Vector2d &p, Eigen::Vector3d &P)
+{
+    double invfx, invfy, invK13, invK23;
+    double xd, yd;
+    double xu, yu;
+
+    invfx = 1.0 / mfx;
+    invfy = 1.0 / mfy;
+    invK13 = mcx / mfx;
+    invK23 = mcy / mfy;
+
+    xd = invfx*p(0) - invK13;
+    yd = invfy*p(1) - invK23;
+
+    // Recursive distortion model
+    int n = 8;
+    Eigen::Vector2d du;
+
+    Distortion(Eigen::Vector2d(xd, yd), du);
+
+    xu = xd - du(0);
+    yu = yd - du(1);
+
+    // the
+    for (int i = 0; i < n; i++)
+    {
+        Distortion(Eigen::Vector2d(xd, yd), du);
+        xu = xd - du(0);
+        yu = yd - du(1);
+    }
+
+    P << xu, yu, 1.0;
+}
+
+
 
 
 
