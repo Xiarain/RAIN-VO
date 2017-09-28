@@ -52,8 +52,10 @@ public:
 
     void DeleteErrStatus(vector<cv::Point2f> &v, vector<uchar> status);
     void DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar> status);
+    void DeleteErrStatus(vector<int> &v, vector<uchar > status);
     bool inBorder(const cv::Point2f &pt);
     void RejectWithF(void);
+    void SetMask();
 
     Camera *mcamera;
 
@@ -64,6 +66,7 @@ public:
         BAD = 3
     };
 
+    cv::Mat mMask;
     cv::Mat mImage;
     cv::Mat mNextImage;
     cv::Mat mPreImage;
@@ -77,13 +80,7 @@ public:
     double ImageGridHeight;
     double ImageGridWidth;
     vector<Grid> Grids;
-
-//    cv::Mat prev_img, cur_img, forw_img;
-//    vector<cv::Point2f> prev_pts, cur_pts, forw_pts;
-//    vector<cv::Point2f> n_pts;
-
-    int firstflag;
-    list< cv::Point2f > keypoints;
+    vector<int> PointTrackcnt;
 
 private:
 

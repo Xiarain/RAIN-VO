@@ -31,7 +31,7 @@ Tracking::Tracking(const string &strSettingsFile)
 
     CmaeraK = cv::Mat::eye(3, 3, CV_32F);
     CmaeraK.at<float>(0, 0) = fsSettings["Camera.fx"];
-CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
+    CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
     CmaeraK.at<float>(0, 2) = fsSettings["Camera.cx"];
     CmaeraK.at<float>(1, 2) = fsSettings["Camera.cy"];
 
@@ -49,7 +49,6 @@ CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
 
     numFeatures = fsSettings["ORBextractor.numFeatures"];
 
-    firstflag = 1;
 }
 
 Tracking::~Tracking()
@@ -57,15 +56,13 @@ Tracking::~Tracking()
     delete(mcamera);
 }
 
-cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
-{
+cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp) {
 
     cv::Mat ImageShow;
 
     // Turn the color image to the gray image
-    if (image.channels() == 3)
-    {
-        cv::cvtColor(image, image, CV_RGB2BGR);
+    if (image.channels() == 3) {
+        cv::cvtColor(image, image, CV_BGR2GRAY);
     }
 
     // the image for the display
@@ -73,32 +70,55 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
     cv::cvtColor(ImageShow, ImageShow, CV_GRAY2RGB);
 
     // histogram equalization for the image
-    if (EQUALIZE == true)
-    {
+    if (EQUALIZE == true) {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
         clahe->apply(image.rowRange(0, ImageHeight), image);
     }
     // the process for the timestamp of the image
-    if (mbFirstImage == true)
-    {
+    if (mbFirstImage == true) {
         mFirstImageTime = timestamp;
         mbFirstImage = false;
     }
 
-
-    if (mNextImage.empty())
-    {
+    if (mNextImage.empty()) {
         mPreImage = mCurImage = mNextImage = image;
-    }
-    else
-    {
+    } else {
         mNextImage = image;
     }
 
+    mvNextPointsPts.clear();
 
+    if (mvCurPointsPts.size() > 0) {
+
+        vector<uchar> status;
+        vector<float> err;
+
+        // mvNextPoints
+        cv::calcOpticalFlowPyrLK(mCurImage, mNextImage, mvCurPointsPts, mvNextPointsPts, status, err, cv::Size(21, 21),
+                                 3);
+
+        for (int i = 0; i < int(mvNextPointsPts.size()); i++)
+            if (status[i] && !inBorder(mvNextPointsPts[i]))
+                status[i] = 0;
+
+        DeleteErrStatus(mvPrePointsPts, status);
+        DeleteErrStatus(mvCurPointsPts, status);
+        DeleteErrStatus(mvNextPointsPts, status);
+        DeleteErrStatus(PointTrackcnt, status);
+    }
+
+//    RejectWithF();
+//  the number of times to track plus one
+    for (auto &n : PointTrackcnt)
+    {
+        n++;
+    }
+
+
+    SetMask();
     // the feature number should be stained in a certain number
     // so the number is too few, it should detect more feature point, if not, the new feature point should been discarded.
-    int n_max_cnt = numFeatures - static_cast<int>(mvCurPointsPts.size());
+    int n_max_cnt = numFeatures - static_cast<int>(mvNextPointsPts.size());
     if (n_max_cnt > 0)
     {
 
@@ -107,7 +127,7 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
         DetectKeyPoint(image, n_max_cnt); // n_pts
 
 #if 0
-        cv::goodFeaturesToTrack(mNextImage, mvPointsPts, n_max_cnt, 0.1, 30, cv::Mat(ImageHeight, ImageWidth, CV_8UC1, cv::Scalar(255)));
+        cv::goodFeaturesToTrack(mNextImage, mvPointsPts, n_max_cnt, 0.1, 30, mMask);
 #endif
 
         cout << " the time of the detect the feature point:" << timefeature.toc() << endl;
@@ -119,61 +139,23 @@ cv::Mat Tracking::ProcessImage(const cv::Mat &image, const double &timestamp)
         mvKeyPoints.clear();
     }
 
-    mvNextPointsPts.clear();
-    mvNextKeyPoints.clear();
-
-    // 上一幅图像中的2D特征点已经找到了
-    if (mvCurPointsPts.size() > 0)
+    for (auto &p : mvPointsPts)
     {
+        mvNextPointsPts.push_back(p);
 
-        vector<uchar> status;
-        vector<float> err;
-
-        // mvNextPoints
-        cv::calcOpticalFlowPyrLK(mCurImage, mNextImage, mvCurPointsPts, mvNextPointsPts, status, err, cv::Size(21, 21), 3);
-
-        for (int i = 0; i < int(mvNextPointsPts.size()); i++)
-            if (status[i] && !inBorder(mvNextPointsPts[i]))
-                status[i] = 0;
-
-        DeleteErrStatus(mvPrePointsPts, status);
-        DeleteErrStatus(mvPreKeyPoints, status);
-
-        DeleteErrStatus(mvCurPointsPts, status);
-        DeleteErrStatus(mvCurKeyPoints, status);
-
-        DeleteErrStatus(mvNextPointsPts, status);
-        DeleteErrStatus(mvNextKeyPoints, status);
+        // the number of the tracked of the new point is one
+        PointTrackcnt.push_back(1);
     }
-
-    // reject some points by the fundamental matrix
-//    RejectWithF();
 
     mPreImage = mNextImage;
-    mvPrePointsPts = mvNextPointsPts;
-    mvPreKeyPoints = mvNextKeyPoints;
-
     mCurImage = mNextImage;
+    mvPrePointsPts = mvNextPointsPts;
     mvCurPointsPts = mvNextPointsPts;
-    mvCurKeyPoints = mvNextKeyPoints;
-
-    // add the new feature point to the next feature vector
-    for (auto p : mvPointsPts)
-    {
-        mvCurPointsPts.push_back(p);
-    }
-
-    for (auto KeyPoint : mvKeyPoints)
-    {
-        mvCurKeyPoints.push_back(KeyPoint);
-    }
-
-    mvPointsPts.clear();
-    mvKeyPoints.clear();
 
     for (int i = 0; i < mvNextPointsPts.size(); i++)
     {
-        cv::circle(ImageShow, mvNextPointsPts[i], 2, cv::Scalar(0, 0, 255), 2);
+        double len = min(1.0, 1.0*PointTrackcnt[i]/20);
+        cv::circle(ImageShow, mvNextPointsPts[i], 2, cv::Scalar(255*(1 - len), 0, 255*len), 2);
     }
 
     cout << "the number of the feature point " << mvNextPointsPts.size() << endl;
@@ -307,11 +289,40 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
 
 #endif
 
-#if 0
-    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 50, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
-    ORBDetctor->detect(image, mvKeyPoints);
+#if 1
+    mvKeyPoints.clear();
+    mvPointsPts.clear();
+    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 30, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
+    ORBDetctor->detect(image, mvKeyPoints, mMask);
 
-    for (auto KeyPoints : mvKeyPoints)
+
+    const int CellSize = 30;
+    int GridnCols = ceil(static_cast<double>(ImageWidth / CellSize));
+    int GridnRows = ceil(static_cast<double>(ImageHeight / CellSize));
+
+    vector<float> GridOccupancy;
+    GridOccupancy.resize(GridnCols*GridnRows);
+
+    fill(GridOccupancy.begin(), GridOccupancy.end(), 0);
+
+    int i = 0;
+    if (mvKeyPoints.size() > 0)
+    {
+        for (auto &Points : mvKeyPoints)
+        {
+            int ceilx = ceil(static_cast<double>(Points.pt.x/CellSize));
+            int ceily = ceil(static_cast<double>(Points.pt.y/CellSize));
+
+            if (Points.response > GridOccupancy[ceilx + ceily*GridnRows])
+            {
+                GridOccupancy[ceilx + ceily*GridnRows] = Points.response;
+                mvKeyPoints[i++] = Points;
+            }
+        }
+    }
+
+    mvKeyPoints.resize(i);
+    for (auto &KeyPoints : mvKeyPoints)
     {
         mvPointsPts.push_back(KeyPoints.pt);
     }
@@ -332,59 +343,12 @@ void Tracking::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     }
 #endif
 
-    const int CellSize = 50;
-    int GridnCols = ceil(static_cast<double>(ImageWidth / CellSize));
-    int GridnRows = ceil(static_cast<double>(ImageHeight / CellSize));
-
-    vector<float > GridOccupancy;
-    GridOccupancy.resize(GridnCols*GridnRows);
-
-    fill(GridOccupancy.begin(), GridOccupancy.end(), 0);
-
-    for (auto Points : mvNextKeyPoints)
-    {
-        int ceilx = ceil(static_cast<double>(Points.pt.x/CellSize));
-        int ceily = ceil(static_cast<double>(Points.pt.y/CellSize));
-
-        if (Points.response > Grids[ceilx + ceily*GridnRows].response)
-        {
-            GridOccupancy[ceilx + ceily*GridnRows] = Points.response;
-
-        }
-    }
-
-    cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 50, 0, 2, cv::ORB::FAST_SCORE, 10, 30);
-    ORBDetctor->detect(image, mvKeyPoints);
-
-    int i = 0;
-
-    for (auto KeyPoints : mvKeyPoints)
-    {
-        const int k = static_cast<int> (KeyPoints.pt.y/CellSize)*GridnCols + static_cast<int>(KeyPoints.pt.x/CellSize);
-
-        if (!(GridOccupancy[k]>0))
-        {
-//            GridOccupancy[k] = KeyPoints.response;
-
-            mvKeyPoints[i++] = KeyPoints;
-        }
-
-    }
-
-    mvKeyPoints.resize(i);
-
-    for (auto KeyPoints : mvKeyPoints)
-    {
-        mvPointsPts.push_back(KeyPoints.pt);
-    }
-
-
 }
 
 void Tracking::DeleteErrStatus(vector<cv::Point2f> &v, vector<uchar> status)
 {
     int j = 0;
-    for (int i = 0; i < v.size(); i++)
+    for (int i = 0; i < int(v.size()); i++)
     {
         if (status[i])
             v[j++] = v[i];
@@ -397,7 +361,17 @@ void Tracking::DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar > status)
     int j = 0;
     for (int i = 0; i < v.size(); i++)
     {
-        if (status[i] == 0)
+        if (status[i])
+            v[j++] = v[i];
+    }
+    v.resize(j);
+}
+void Tracking::DeleteErrStatus(vector<int> &v, vector<uchar > status)
+{
+    int j = 0;
+    for (int i = 0; i < v.size(); i++)
+    {
+        if (status[i])
             v[j++] = v[i];
     }
     v.resize(j);
@@ -468,18 +442,18 @@ void Tracking::RejectWithF(void)
 
     const double FOCAL_LENGTH = 460.0;
 
-    for (int i = 0; i < vunPrePointsPts.size(); i++)
+    for (int i = 0; i < mvPrePointsPts.size(); i++)
     {
         Eigen::Vector3d tmpP;
 
-        mcamera->LiftProjective(Eigen::Vector2d(vunPrePointsPts[i].x, vunPrePointsPts[i].y), tmpP);
+        mcamera->LiftProjective(Eigen::Vector2d(mvPrePointsPts[i].x, mvPrePointsPts[i].y), tmpP);
         tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
-        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageWidth/2.0;
+        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
         vunPrePointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
 
-        mcamera->LiftProjective(Eigen::Vector2d(vunNextPointsPts[i].x, vunNextPointsPts[i].y), tmpP);
+        mcamera->LiftProjective(Eigen::Vector2d(mvNextPointsPts[i].x, mvNextPointsPts[i].y), tmpP);
         tmpP[0]  = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
-        tmpP[1]  = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageWidth/2.0;
+        tmpP[1]  = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
         vunNextPointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
     }
 
@@ -493,6 +467,7 @@ void Tracking::RejectWithF(void)
         DeleteErrStatus(mvPrePointsPts, status);
         DeleteErrStatus(mvNextPointsPts, status);
         DeleteErrStatus(mvCurPointsPts, status);
+        DeleteErrStatus(PointTrackcnt, status);
     }
     else
     {
@@ -500,7 +475,7 @@ void Tracking::RejectWithF(void)
     }
 
     int i = 0;
-    for (auto v:status)
+    for (auto &v:status)
     {
         if (v == 0)
             i++;
@@ -508,6 +483,39 @@ void Tracking::RejectWithF(void)
     cout << "F:" << status.size() << " " << i << endl;
 
 
+}
+
+void Tracking::SetMask()
+{
+    mMask = cv::Mat(ImageHeight, ImageWidth, CV_8UC1, cv::Scalar(255));
+
+    vector<pair<int ,cv::Point2f>> PointsCnt;
+
+    for (int i = 0; i < mvNextPointsPts.size(); i++)
+    {
+        PointsCnt.push_back(make_pair(PointTrackcnt[i], mvNextPointsPts[i]));
+    }
+
+    sort(PointsCnt.begin(), PointsCnt.end(), [](const pair<int, cv::Point2f> &a, const pair<int, cv::Point2f> &b)
+         {
+             return a.first > b.first;
+         });
+
+    mvNextPointsPts.clear();
+    PointTrackcnt.clear();
+
+    for (auto &Point : PointsCnt)
+    {
+        if (mMask.at<uchar>(Point.second) == 255) // !!! must have the <uchar>
+        {
+            mvNextPointsPts.push_back(Point.second);
+            PointTrackcnt.push_back(Point.first);
+            cv::circle(mMask, Point.second, 30, 0, -1);
+        }
+    }
+
+    cv::imshow("mask", mMask);
+    cv::waitKey(2);
 }
 
 } // namespace RAIN_VIO

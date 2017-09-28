@@ -38,7 +38,7 @@ ThDepth: 35
 #--------------------------------------------------------------------------------------------
 
 # ORB Extractor: Number of features per image
-ORBextractor.numFeatures: 500
+ORBextractor.numFeatures: 270
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 	
 ORBextractor.scaleFactor: 1.2
