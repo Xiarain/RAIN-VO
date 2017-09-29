@@ -36,7 +36,6 @@ struct Grid
 };
 
 
-
 class Tracking
 {
 
@@ -50,12 +49,15 @@ public:
 
     void DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds);
 
-    void DeleteErrStatus(vector<cv::Point2f> &v, vector<uchar> status);
-    void DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar> status);
-    void DeleteErrStatus(vector<int> &v, vector<uchar > status);
+//    void DeleteErrStatus(vector<cv::Point2f> &v, vector<uchar> status);
+//    void DeleteErrStatus(vector<cv::KeyPoint> &v, vector<uchar> status);
+//    void DeleteErrStatus(vector<int> &v, vector<uchar > status);
     bool inBorder(const cv::Point2f &pt);
     void RejectWithF(void);
     void SetMask();
+
+    template <typename T>
+    void DelteErrStatus(vector<T> &v, vector<uchar> status);
 
     Camera *mcamera;
 
@@ -71,6 +73,7 @@ public:
     cv::Mat mNextImage;
     cv::Mat mPreImage;
     cv::Mat mCurImage;
+    cv::Mat mNextImageShow, mCurImageShow;
 
     bool EQUALIZE;
     cv::Mat CmaeraK;
@@ -87,6 +90,7 @@ private:
     bool mbFirstImage;
     double mFirstImageTime;
     int numFeatures;
+    int minDist;
     vector<cv::KeyPoint> mvKeyPoints;
     vector<cv::KeyPoint> mvPreKeyPoints;
     vector<cv::KeyPoint> mvNextKeyPoints;

@@ -67,21 +67,29 @@ void Camera::LiftProjective(const Eigen::Vector2d &p, Eigen::Vector3d &P)
     xd = invfx*p(0) - invK13;
     yd = invfy*p(1) - invK23;
 
-    // Recursive distortion model
-    int n = 8;
-    Eigen::Vector2d du;
-
-    Distortion(Eigen::Vector2d(xd, yd), du);
-
-    xu = xd - du(0);
-    yu = yd - du(1);
-
-    // the
-    for (int i = 0; i < n; i++)
+    if (1)
     {
+        // Recursive distortion model
+        int n = 8;
+        Eigen::Vector2d du;
+
         Distortion(Eigen::Vector2d(xd, yd), du);
+
         xu = xd - du(0);
         yu = yd - du(1);
+
+        // the
+        for (int i = 0; i < n; i++)
+        {
+            Distortion(Eigen::Vector2d(xd, yd), du);
+            xu = xd - du(0);
+            yu = yd - du(1);
+        }
+    }
+    else
+    {
+        xu = xd;
+        yu = yd;
     }
 
     P << xu, yu, 1.0;

@@ -38,7 +38,7 @@ ThDepth: 35
 #--------------------------------------------------------------------------------------------
 
 # ORB Extractor: Number of features per image
-ORBextractor.numFeatures: 270
+ORBextractor.numFeatures: 250
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 	
 ORBextractor.scaleFactor: 1.2
@@ -52,6 +52,7 @@ ORBextractor.nLevels: 8
 # You can lower these values if your images have low contrast			
 ORBextractor.iniThFAST: 20
 ORBextractor.minThFAST: 7
+ORBextractor.minDist: 20
 
 #--------------------------------------------------------------------------------------------
 # Viewer Parameters
