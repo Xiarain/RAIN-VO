@@ -40,7 +40,10 @@ add_executable(VIO
     src/System.cpp
     src/KeyFrame.cpp
     src/Tracking.cpp
-        src/Camera.cpp include/Camera.h)
+    src/Camera.cpp
+    src/Feature.cpp
+    src/Initializer.cpp
+    src/Map.cpp)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}

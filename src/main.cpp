@@ -50,7 +50,7 @@ int main(void)
             return 1;
         }
 
-        VIO.TrackMono(image, vTimestamps[i]);
+        VIO.TrackMono(strSettingsFile, image, vTimestamps[i]);
     }
 
 

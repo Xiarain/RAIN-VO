@@ -12,6 +12,7 @@
 #include <opencv2/core/core.hpp>
 
 #include "Tracking.h"
+#include "Frame.h"
 
 using namespace std;
 
@@ -30,11 +31,13 @@ private:
     std::thread* mptLocalMapping;
     std::thread* mptViewer;
 //    std::thread* mptLoopClosing;
+
 public:
 
     System(const string &strSettingsFile, const bool bOpenViwer);
 
-    void TrackMono(const cv::Mat &image, const double &TimeStamps);
+    void TrackMono(const string &strSettingsFile, const cv::Mat &image, const double &TimeStamps);
+
 
 public:
 
