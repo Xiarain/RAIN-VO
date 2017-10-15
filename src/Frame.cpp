@@ -11,6 +11,17 @@ Frame::Frame(const string &strSettingsFile)
 {
     mpfeature = new Feature(strSettingsFile);
 
+    cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
+
+    if (!fsSettings.isOpened())
+    {
+        cerr << "Failed to open settings file at " << strSettingsFile << endl;
+        exit(-1);
+    }
+
+    ImageHeight = fsSettings["Camera.height"];
+    ImageWidth = fsSettings["Camera.width"];
+
 }
 
 Frame::~Frame()
@@ -20,6 +31,9 @@ Frame::~Frame()
 
 void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
 {
+    mvFraPointsPts.clear();
+    mvFraPointsID.clear();
+
     mImageShow = image.clone();
 
     mpfeature->ProcessImage(image.clone(), TimeStamps);
@@ -27,40 +41,39 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
     mvFraPointsPts = mpfeature->UndistoredPoints(); // mvCurPointsPts
     mvFraPointsID = mpfeature->mvPointTrackID;
 
-//    cout << "mvFraPointsID " << endl;
-//    for (auto id : mvFraPointsID)
-//    {
-//        cout << id << endl;
-//    }
-
     mvFraFeatures.clear();
-    for (int i = 0; i < mvFraPointsPts.size(); i++) // vector<pair<uint, Eigen::Vector3d> >
+    for (int i = 0; i < mvFraPointsPts.size(); i++)
     {
         double x = mvFraPointsPts[i].x;
         double y = mvFraPointsPts[i].y;
         double z = 1.0;
-        uint id = mvFraPointsID[i];
-        mvFraFeatures.emplace_back(make_pair(id, Eigen::Vector3d(x, y, z)));
+        mvFraFeatures.emplace_back(make_pair(mvFraPointsID[i], Eigen::Vector3d(x, y, z)));
     }
 
-//    for (auto id : mvFraPointsID)
-//        cout << id << endl;
+#if 0
+    mImageShow = mpfeature->UndistoredImage(image);
 
-//    mImageShow = mpfeature->UndistoredImage(image);
+    cv::cvtColor(mImageShow, mImageShow, CV_GRAY2RGB);
 
-//    cv::cvtColor(mImageShow, mImageShow, CV_GRAY2RGB);
+    const double FOCAL_LENGTH = 460.0;
+    vector<cv::Point2f> FraPointsdis = mvFraPointsPts;
+    for (auto &point : FraPointsdis)
+    {
+        point.x = FOCAL_LENGTH*point.x + ImageWidth/2.0;
+        point.y = FOCAL_LENGTH*point.y + ImageHeight/2.0;
+    }
 
+    if (!mImageShow.empty())
+    {
+        for (int i = 0; i < FraPointsdis.size(); i++)
+        {
+            cv::circle(mImageShow, FraPointsdis[i], 2, cv::Scalar(255, 0, 0), 2);
+        }
 
-//    if (!mImageShow.empty())
-//    {
-//        for (int i = 0; i < mvFraPointsPts.size(); i++)
-//        {
-//            cv::circle(mImageShow, mvFraPointsPts[i], 2, cv::Scalar(255, 0, 0), 2);
-//        }
-//
-//        cv::imshow("", mImageShow);
-//        cv::waitKey(0);
-//    }
+        cv::imshow("", mImageShow);
+        cv::waitKey(0);
+    }
+#endif
 
 //    cout << "the current frame: " << mvFraPointsPts.size() << endl;
 

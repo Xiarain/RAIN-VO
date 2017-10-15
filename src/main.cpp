@@ -3,9 +3,9 @@
 //
 
 
-#include<fstream>
-
+#include <fstream>
 #include "System.h"
+#include "Initializer.h"
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -20,7 +20,8 @@ void ReadParameter();
 // PATH_TO_SEQUENCE_FOLDER/mav0/cam0/data Examples/Monocular/EuRoC_TimeStamps/SEQUENCE.txt
 int main(void)
 {
-    // In order to debug the code in the convenient way, the settings file path is writen in here
+
+   // In order to debug the code in the convenient way, the settings file path is writen in here
     string strSettingsFile("../config/EuRoC/EuRoC.yaml");
     string strImagePath("../DataSheet/mav0/cam0/data");
     string strTimesPath("../DataSheet/EuRoC_TimeStamps/MH03.txt");

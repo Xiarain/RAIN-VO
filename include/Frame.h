@@ -31,9 +31,13 @@ public:
     ~Frame();
     void DetectKeyPoint(const cv::Mat &image, const double &TimeStamps);
 
+
+    cv::Mat mImageShow;
+
 private:
     Feature *mpfeature;
-    cv::Mat mImageShow;
+    double ImageHeight;
+    double ImageWidth;
 
 };
 

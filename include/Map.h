@@ -37,7 +37,7 @@ public:
 class MapPoint
 {
 public:
-    const int mnFeatureID;
+    int mnFeatureID;
     int mnStartFrame;
     vector<FeaturePerFrame> mvFeaturePerFrame;
     int mnUsedNum;
@@ -67,6 +67,8 @@ public:
     list<MapPoint> mlMapPoints;
 
     bool AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
+    double ComputeParallax(const MapPoint &mapPoint, int FrameCount);
+    vector<pair<Eigen::Vector3d, Eigen::Vector3d>> GetCorresponding(int FrameCount1, int FrameCount2);
 
 }; // class Map
 

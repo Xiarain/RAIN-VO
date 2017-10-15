@@ -15,6 +15,7 @@
 #include "Frame.h"
 #include "Feature.h"
 #include "Map.h"
+#include "Initializer.h"
 
 using namespace std;
 
@@ -24,6 +25,14 @@ namespace RAIN_VIO
 class Camera;
 class Frame;
 class Map;
+class Initializer;
+
+enum eTrackingState {
+    NO_INITIALIZED = 0,
+    OK = 1,
+    LOST = 2,
+    BAD = 3
+};
 
 class Tracking
 {
@@ -32,12 +41,13 @@ public:
 
     Camera *mpcamera;
     Map *mpMap;
-    enum eTrackingState {
-        NO_INITIALIZED = 0,
-        OK = 1,
-        LOST = 2,
-        BAD = 3
-    };
+    Initializer *mpinitializer;
+    Frame *mCurrentFrame;
+    Feature *feature;
+
+    list<Frame *> mlpFrames;
+
+    eTrackingState etrackingState;
 
     cv::Mat mMask;
     cv::Mat mImage;
@@ -56,13 +66,14 @@ public:
 
     int mdFrameCount;
 
+    const int mWINDOWSIEZES;
+
     Tracking(const string &strSettingsFile);
     Tracking();
     ~Tracking();
     void Track(const cv::Mat &image, const double &TimeStamps);
 
-    Frame *mCurrentFrame;
-    Feature *feature;
+
 
 private:
 

@@ -2,6 +2,7 @@
 // Created by rain on 17-10-5.
 //
 
+#include <string>
 #include "Feature.h"
 #include "TicToc.h"
 
@@ -70,6 +71,7 @@ Feature::~Feature()
 
 bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
 {
+    TicTOC timefeature;
     // the image for the display
     mNextImageShow = image.clone();
     cv::cvtColor(mNextImageShow, mNextImageShow, CV_GRAY2RGB);
@@ -132,8 +134,6 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     int n_max_cnt = numFeatures - static_cast<int>(mvNextPointsPts.size());
     if (n_max_cnt > 0)
     {
-
-        TicTOC timefeature;
         // detect the feature point (mvKeyPoints, mvPointsPts)
         DetectKeyPoint(mNextImage, n_max_cnt); // n_pts
 #if 0
@@ -141,7 +141,6 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
         cv::goodFeaturesToTrack(mNextImage, mvPointsPts, n_max_cnt, 0.1, 30, mMask);
 #endif
 
-        cout << " the time of the detect the feature point:" << timefeature.toc() << endl;
     }
     else
     {
@@ -167,21 +166,26 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
 
     if (!mCurImageShow.empty() && mFeatureShow ==1 )
     {
-        for (int i = 0; i < mvCurPointsPts.size(); i++)
+        for (int i = 0; i < int(mvCurPointsPts.size()); i++)
         {
             double len = min(1.0, 1.0*mvPointTrackcnt[i]/20);
             cv::circle(mCurImageShow, mvCurPointsPts[i], 2, cv::Scalar(255*(1 - len), 0, 255*len), 2);
         }
 
-        cv::imshow("", mCurImageShow);
-        cv::waitKey(0);
+        // display the time of the image and the number of the feature point toc
+        cv::putText(mCurImageShow, to_string(timestamp), cv::Point(10,30), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
+        cv::putText(mCurImageShow, to_string(int(mvCurPointsPts.size())), cv::Point(10,50), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
+        cv::putText(mCurImageShow, to_string(timefeature.toc()), cv::Point(10,70), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
+
+        cv::imshow("Feature Detection Window", mCurImageShow); // to_string(timestamp)
+        cv::waitKey(20);
     }
 
     mCurImageShow = mNextImageShow;
     mCurImage = mNextImage;
     mvCurPointsPts = mvNextPointsPts;
 
-    cout << "the number of the feature point " << mvNextPointsPts.size() << endl;
+//    cout << "the number of the feature point " << mvNextPointsPts.size() << endl;
 
     return true;
 }
@@ -193,7 +197,7 @@ void Feature::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     mvKeyPoints.clear();
     mvPointsPts.clear();
 
-#ifdef ORBKEYPOINT
+#if 1
     cv::Ptr<cv::FeatureDetector> ORBDetctor = cv::ORB::create(numFeatureNeeds, 1.2, 1, 10, 0, 2, cv::ORB::FAST_SCORE, 10, 40);
     ORBDetctor->detect(image, mvKeyPoints, mMask);
 #else
@@ -323,7 +327,7 @@ void Feature::RejectWithF(void)
     {
 //        vector<cv::Point2f> vunNextPointsPts(mvNextPointsPts.size()), vunPrePointsPts(mvPreKeyPoints.size());
         // the maximum distance from a point to an epipolar line in pixels,
-        cv::findFundamentalMat(vunPrePointsPts, vunNextPointsPts, cv::FM_RANSAC, 2.5, 0.99, status);
+        cv::findFundamentalMat(vunPrePointsPts, vunNextPointsPts, cv::FM_RANSAC, 2.0, 0.99, status); //  1.0
 
         DeleteErrStatus(mvPrePointsPts, status);
         DeleteErrStatus(mvNextPointsPts, status);
@@ -390,6 +394,7 @@ void Feature::UpdateKeyPointID()
 vector<cv::Point2f> Feature::UndistoredPoints()
 {
     vector<cv::Point2f> UnPoints;
+    const double FOCAL_LENGTH = 460.0;
 // OpenCV Fundamental matrix
 #if 0
     // Fill matrix with points
@@ -406,19 +411,22 @@ vector<cv::Point2f> Feature::UndistoredPoints()
 
     for (int i = 0; i <mvCurPointsPts.size(); i++)
     {
-        UnPoints.push_back(cv::Point2f(mat.at<float>(i,0), mat.at<float>(i,1)));
+        UnPoints.push_back(cv::Point2f((mat.at<float>(i,0) - ImageWidth/2.0)/FOCAL_LENGTH, (mat.at<float>(i,1) - ImageHeight/2.0)/FOCAL_LENGTH));
     }
 
 
 #else
-    const double FOCAL_LENGTH = 460.0;
     for (int i = 0; i < mvCurPointsPts.size(); i++)
     {
         Eigen::Vector3d tmpP;
 
         mpcamera->LiftProjective(Eigen::Vector2d(mvCurPointsPts[i].x, mvCurPointsPts[i].y), tmpP);
-        tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
-        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
+//        tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
+//        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
+
+        tmpP[0] = tmpP[0]/tmpP[2];
+        tmpP[1] = tmpP[1]/tmpP[2];
+
         UnPoints.push_back(cv::Point2f(tmpP[0], tmpP[1]));
     }
 

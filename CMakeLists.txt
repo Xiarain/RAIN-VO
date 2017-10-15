@@ -43,7 +43,9 @@ add_executable(VIO
     src/Camera.cpp
     src/Feature.cpp
     src/Initializer.cpp
-    src/Map.cpp)
+    src/Map.cpp
+    src/BenchMark.cpp
+)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}

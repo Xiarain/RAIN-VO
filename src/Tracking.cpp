@@ -10,10 +10,10 @@
 namespace RAIN_VIO
 {
 
-Tracking::Tracking()
+Tracking::Tracking()  : mWINDOWSIEZES(20)
 {
 }
-Tracking::Tracking(const string &strSettingsFile)
+Tracking::Tracking(const string &strSettingsFile) : mWINDOWSIEZES(20)
 {
     mstrSettingsFile = strSettingsFile;
 
@@ -22,6 +22,9 @@ Tracking::Tracking(const string &strSettingsFile)
     mFirstImageTime = 0;
     mIDcnt = 0;
     mdFrameCount = 1;
+    etrackingState = NO_INITIALIZED;
+
+    mlpFrames.clear();
 
     mpcamera = new Camera(strSettingsFile);
 
@@ -56,6 +59,7 @@ Tracking::Tracking(const string &strSettingsFile)
 
     mCurrentFrame = new Frame(mstrSettingsFile);
     mpMap = new Map;
+    mpinitializer = new Initializer(CmaeraK, mpMap);
 }
 
 Tracking::~Tracking()
@@ -64,11 +68,38 @@ Tracking::~Tracking()
 
 void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
+    Eigen::Matrix3d RelativeR;
+    Eigen::Vector3d RelativeT;
+    int idx;
+
     vector<pair<int, Eigen::Vector3d>> Features;
 
     mCurrentFrame->DetectKeyPoint(image, TimeStamps);
 
+//    if (mlpFrames.size() > 1)
+//    {
+//        cv::drawMatches(mlpFrames.back()->mImageShow, mlpFrames.back()->mvFraPointsPts, mCurrentFrame->mImageShow, mCurrentFrame->mvFraPointsPts, );
+//    }
+
+    mlpFrames.emplace_back(mCurrentFrame);
+
+    // whether keyframe or not
     mpMap->AddFeatureCheckParallax(mdFrameCount, mCurrentFrame->mvFraFeatures);
+
+    if (etrackingState == NO_INITIALIZED)
+    {
+        if (mpinitializer->RelativePose(RelativeR, RelativeT, idx))
+        {
+            etrackingState = OK;
+            cout << "the initialize the rotation and translation" << endl;
+            cout << RelativeR << endl;
+            cout << RelativeT << endl;
+            cout << idx << endl;
+        }
+
+    }
+    
+    // checke if there are enough correnspondences
 }
 
 
