@@ -16,7 +16,8 @@ namespace RAIN_VIO
 
 System::System(const string &strSettingsFile, const bool bOpenViwer)
 {
-    mTracker = new Tracking(strSettingsFile);
+    mnWindowSize = 10;
+    mTracker = new Tracking(strSettingsFile, mnWindowSize);
 
 }
 

@@ -19,8 +19,6 @@ class Camera
 
 public:
 
-
-
     double mk1;
     double mk2;
     double mp1;

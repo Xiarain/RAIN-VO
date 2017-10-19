@@ -11,9 +11,10 @@
 namespace RAIN_VIO
 {
 
-Initializer::Initializer(cv::Mat _CmaeraK, Map *_Map) :mpMap(_Map)
+Initializer::Initializer(cv::Mat _CmaeraK, Map *_Map, int nWindowSize) :mpMap(_Map)
 {
     mCameraK = _CmaeraK;
+    mnWindowSize = nWindowSize;
 }
 
 bool Initializer::SolveRelativeRT(const vector<pair<Eigen::Vector3d, Eigen::Vector3d>> &Corres, Eigen::Matrix3d &Rotation, Eigen::Vector3d &Translation)
@@ -50,8 +51,10 @@ bool Initializer::SolveRelativeRT(const vector<pair<Eigen::Vector3d, Eigen::Vect
         Rotation = R.transpose();
         Translation = -R.transpose()*T;
 
-        if (inliercnt < 12)
+        if (inliercnt < 30)
             return false;
+
+        cout << "in the fundamental matrix, the inlier points of the all points " << inliercnt << "of" << static_cast<int>(Corres.size()) << endl;
 
         return true;
     } // (Corres.size() > 15)
@@ -63,15 +66,24 @@ bool Initializer::SolveRelativeRT(const vector<pair<Eigen::Vector3d, Eigen::Vect
 
 }
 
+/**
+ * @brief
+ *        Notice: the number of the frames should be greater than the window size, and this function can work
+ * @param RelativeR
+ * @param RelativeT
+ * @param idx
+ * @return
+ */
 bool Initializer::RelativePose(Eigen::Matrix3d &RelativeR, Eigen::Vector3d &RelativeT, int &idx)
 {
-    const int WindowSize = 10;
 
-
-    for (int i = 0; i < WindowSize; i++)
+    for (int i = 0; i < mnWindowSize; i++)
     {
         vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
-        corres = mpMap->GetCorresponding(i, WindowSize);
+
+        corres = mpMap->GetCorresponding(i, mnWindowSize);
+
+        cout << static_cast<int>(corres.size()) << endl;
 
         if (corres.size() > 20)
         {
@@ -95,10 +107,53 @@ bool Initializer::RelativePose(Eigen::Matrix3d &RelativeR, Eigen::Vector3d &Rela
                 return true;
             }
         }
+        else
+        {
+            cout << "Warning: the number of the corresponding point between the two image is too littel:"
+                 << static_cast<int>(corres.size()) << endl;
+            continue;
+        }
     }
 
-    cout << " solution of the F matrix in the initializtion can't be got " << endl;
+    cout << "Warning:  solution of the F matrix in the initializtion can't be got " << endl;
     return false;
+}
+
+
+void GlobalSFM::TriangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0, Eigen::Matrix<double, 3, 4> &Pose1,
+                                 Eigen::Vector2d &Point0, Eigen::Vector2d &Point1, Eigen::Vector3d &Point3d)
+{
+    // x × （PX） = 0
+    // AX = 0
+    Eigen::Matrix4d A = Eigen::Matrix4d::Zero();
+
+    A.row(0) = Point0[0]*Pose0.row(2) - Pose0.row(0);
+    A.row(1) = Point0[1]*Pose0.row(2) - Pose0.row(1);
+    A.row(2) = Point1[0]*Pose1.row(2) - Pose1.row(0);
+    A.row(3) = Point1[1]*Pose1.row(2) - Pose1.row(1);
+
+    // SVD
+    Eigen::Vector4d X;
+    X = A.jacobiSvd(Eigen::ComputeFullV).matrixV().rightCols<1>();
+
+    Point3d(0) = X(0)/X(3);
+    Point3d(1) = X(1)/X(3);
+    Point3d(2) = X(2)/X(3);
+}
+
+bool GlobalSFM::SolveFrameByPnP(Eigen::Matrix3d &RInitial, Eigen::Vector3d &PInitial, int i,
+                                vector<SFMFeature> &vSFMFeature)
+{
+    vector<cv::Point2f> vPoint2D;
+    vector<cv::Point3f> vPoint3D;
+
+    for (int i = 0; i < mnFeatureNum; i++)
+    {
+        if (vSFMFeature[i].State != true)
+            continue;
+        Eigen::Vector2d Point2D;
+    }
+
 }
 
 

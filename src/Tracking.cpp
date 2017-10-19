@@ -10,10 +10,10 @@
 namespace RAIN_VIO
 {
 
-Tracking::Tracking()  : mWINDOWSIEZES(20)
+Tracking::Tracking()
 {
 }
-Tracking::Tracking(const string &strSettingsFile) : mWINDOWSIEZES(20)
+Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
 {
     mstrSettingsFile = strSettingsFile;
 
@@ -21,8 +21,9 @@ Tracking::Tracking(const string &strSettingsFile) : mWINDOWSIEZES(20)
     mbFirstImage = true;
     mFirstImageTime = 0;
     mIDcnt = 0;
-    mdFrameCount = 1;
+    mdFrameCount = 0;
     etrackingState = NO_INITIALIZED;
+    mnWindowSize = nWindowSize;
 
     mlpFrames.clear();
 
@@ -54,12 +55,12 @@ Tracking::Tracking(const string &strSettingsFile) : mWINDOWSIEZES(20)
     ImageGridHeight = fsSettings["ImageGridHeight"];
     ImageGridWidth = fsSettings["ImageGridWidth"];
 
-    numFeatures = fsSettings["ORBextractor.numFeatures"];
+    mnumFeatures = fsSettings["ORBextractor.numFeatures"];
     minDist = fsSettings["ORBextractor.minDist"];
 
-    mCurrentFrame = new Frame(mstrSettingsFile);
-    mpMap = new Map;
-    mpinitializer = new Initializer(CmaeraK, mpMap);
+    mCurrentFrame = new Frame(mstrSettingsFile, nWindowSize);
+    mpMap = new Map(nWindowSize);
+    mpinitializer = new Initializer(CmaeraK, mpMap, nWindowSize);
 }
 
 Tracking::~Tracking()
@@ -70,7 +71,7 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
     Eigen::Matrix3d RelativeR;
     Eigen::Vector3d RelativeT;
-    int idx;
+    int idx = 0;
 
     vector<pair<int, Eigen::Vector3d>> Features;
 
@@ -81,25 +82,86 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 //        cv::drawMatches(mlpFrames.back()->mImageShow, mlpFrames.back()->mvFraPointsPts, mCurrentFrame->mImageShow, mCurrentFrame->mvFraPointsPts, );
 //    }
 
+    // the list of the map point
     mlpFrames.emplace_back(mCurrentFrame);
 
     // whether keyframe or not
-    mpMap->AddFeatureCheckParallax(mdFrameCount, mCurrentFrame->mvFraFeatures);
-
-    if (etrackingState == NO_INITIALIZED)
+    if (mpMap->AddFeatureCheckParallax(mdFrameCount, mCurrentFrame->mvFraFeatures))
     {
-        if (mpinitializer->RelativePose(RelativeR, RelativeT, idx))
+        // this is a keyframe
+        eMarginflag = MARGINOLD;
+    }
+    else
+        eMarginflag = MARGINSECONDNEW;
+
+
+        if (etrackingState == NO_INITIALIZED)
         {
-            etrackingState = OK;
-            cout << "the initialize the rotation and translation" << endl;
-            cout << RelativeR << endl;
-            cout << RelativeT << endl;
-            cout << idx << endl;
+            if (mdFrameCount == mnWindowSize)
+            {
+                if (mpinitializer->RelativePose(RelativeR, RelativeT, idx))
+                {
+                    etrackingState = OK;
+                    cout << "the initialize the rotation and translation" << endl;
+                    cout << RelativeR << endl;
+                    cout << RelativeT.transpose() << endl;
+                    cout << idx << endl;
+                }
+                else
+                {
+
+                    SlideWindow();
+                }
+
+            }
+            else
+                mdFrameCount++;
+
+        }
+        else
+        {
+            SlideWindow();
+
+//            for (size_t i = 0; i < mnWindowSize; i++)
+//            {
+//                vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
+//                corres = mpMap->GetCorresponding(i, mnWindowSize);
+//
+//                cout << static_cast<int>(corres.size()) << endl;
+//
+//                corres.clear();
+//            }
+        }
+
+
+//    for (size_t i = 0; i < mnWindowSize; i++)
+//    {
+//        vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
+//        corres = mpMap->GetCorresponding(i, mnWindowSize);
+//
+//        cout << static_cast<int>(corres.size()) << endl;
+//    }
+
+    // checke if there are enough correnspondences
+}
+
+void Tracking::SlideWindow()
+{
+    if (eMarginflag == MARGINOLD)
+    {
+        if (mdFrameCount == mnWindowSize)
+        {
+            mpMap->RemoveBack();
         }
 
     }
-    
-    // checke if there are enough correnspondences
+    else
+    {
+        if (mdFrameCount == mnWindowSize)
+        {
+            mpMap->RemoveFront(mdFrameCount);
+        }
+    }
 }
 
 

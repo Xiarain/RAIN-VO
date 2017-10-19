@@ -23,8 +23,10 @@ static void DeleteErrStatus(vector<T> &v, vector<uchar> status)
     v.resize(j);
 }
 
-Feature::Feature(const string &strSettingsFile)
+Feature::Feature(const string &strSettingsFile, const int nWindowSize)
 {
+    mnWindowSize = nWindowSize;
+
     EQUALIZE = true;
     mbFirstImage = true;
     mFirstImageTime = 0;
@@ -58,7 +60,7 @@ Feature::Feature(const string &strSettingsFile)
     ImageGridHeight = fsSettings["ImageGridHeight"];
     ImageGridWidth = fsSettings["ImageGridWidth"];
 
-    numFeatures = fsSettings["ORBextractor.numFeatures"];
+    mnumFeatures = fsSettings["ORBextractor.numFeatures"];
     minDist = fsSettings["ORBextractor.minDist"];
     mFeatureShow = fsSettings["Viewer.FeatureShow"];
 
@@ -77,7 +79,8 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     cv::cvtColor(mNextImageShow, mNextImageShow, CV_GRAY2RGB);
 
     // Turn the color image to the gray image
-    if (image.channels() == 3) {
+    if (image.channels() == 3)
+    {
         cv::cvtColor(image, image, CV_BGR2GRAY);
     }
 
@@ -87,12 +90,14 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
         clahe->apply(image.rowRange(0, (int)ImageHeight), image);
     }
     // the process for the timestamp of the image
-    if (mbFirstImage) {
+    if (mbFirstImage)
+    {
         mFirstImageTime = timestamp;
         mbFirstImage = false;
     }
 
-    if (mNextImage.empty()) {
+    if (mNextImage.empty())
+    {
         mPreImage = mCurImage = mNextImage = image;
     } else {
         mNextImage = image;
@@ -131,7 +136,7 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     SetMask();
     // the feature number should be stained in a certain number
     // so the number is too few, it should detect more feature point, if not, the new feature point should been discarded.
-    int n_max_cnt = numFeatures - static_cast<int>(mvNextPointsPts.size());
+    int n_max_cnt = mnumFeatures - static_cast<int>(mvNextPointsPts.size());
     if (n_max_cnt > 0)
     {
         // detect the feature point (mvKeyPoints, mvPointsPts)
@@ -168,7 +173,7 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     {
         for (int i = 0; i < int(mvCurPointsPts.size()); i++)
         {
-            double len = min(1.0, 1.0*mvPointTrackcnt[i]/20);
+            double len = min(1.0, 1.0*mvPointTrackcnt[i]/mnWindowSize);
             cv::circle(mCurImageShow, mvCurPointsPts[i], 2, cv::Scalar(255*(1 - len), 0, 255*len), 2);
         }
 
@@ -178,7 +183,7 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
         cv::putText(mCurImageShow, to_string(timefeature.toc()), cv::Point(10,70), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
 
         cv::imshow("Feature Detection Window", mCurImageShow); // to_string(timestamp)
-        cv::waitKey(20);
+        cv::waitKey(0);
     }
 
     mCurImageShow = mNextImageShow;

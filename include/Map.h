@@ -62,13 +62,19 @@ public:
 class Map
 {
 public:
-    Map();
+
+    int mnWindowSize;
+
+    Map(int nWindowSize);
     int mLastTrackNum;
     list<MapPoint> mlMapPoints;
 
     bool AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
     double ComputeParallax(const MapPoint &mapPoint, int FrameCount);
     vector<pair<Eigen::Vector3d, Eigen::Vector3d>> GetCorresponding(int FrameCount1, int FrameCount2);
+    void RemoveBack();
+    void RemoveFront(int FrameCount);
+    void DebugShow();
 
 }; // class Map
 

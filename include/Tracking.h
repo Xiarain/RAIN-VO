@@ -27,11 +27,18 @@ class Frame;
 class Map;
 class Initializer;
 
-enum eTrackingState {
+enum eTrackingState
+{
     NO_INITIALIZED = 0,
     OK = 1,
     LOST = 2,
     BAD = 3
+};
+
+enum eMarginFlag
+{
+    MARGINOLD = 0,
+    MARGINSECONDNEW = 1
 };
 
 class Tracking
@@ -48,6 +55,7 @@ public:
     list<Frame *> mlpFrames;
 
     eTrackingState etrackingState;
+    eMarginFlag eMarginflag;
 
     cv::Mat mMask;
     cv::Mat mImage;
@@ -66,20 +74,19 @@ public:
 
     int mdFrameCount;
 
-    const int mWINDOWSIEZES;
+    int mnWindowSize;
 
-    Tracking(const string &strSettingsFile);
+    Tracking(const string &strSettingsFile, int nWindowSize);
     Tracking();
     ~Tracking();
     void Track(const cv::Mat &image, const double &TimeStamps);
-
-
+    void SlideWindow();
 
 private:
 
     bool mbFirstImage;
     double mFirstImageTime;
-    int numFeatures;
+    int mnumFeatures;
     int minDist;
     uint mIDcnt;
     string mstrSettingsFile;

@@ -21,18 +21,18 @@ class Frame
 {
 
 public:
+    int mnWindowSize;
+
+    cv::Mat mImageShow;
 
     vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
     vector<cv::Point2f> mvFraPointsPts;
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
 
-    Frame(const string &strSettingsFile);
+    Frame(const string &strSettingsFile, const int nWindowSize);
     ~Frame();
     void DetectKeyPoint(const cv::Mat &image, const double &TimeStamps);
-
-
-    cv::Mat mImageShow;
 
 private:
     Feature *mpfeature;

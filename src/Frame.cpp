@@ -7,9 +7,11 @@
 namespace RAIN_VIO
 {
 
-Frame::Frame(const string &strSettingsFile)
+Frame::Frame(const string &strSettingsFile, const int nWindowSize)
 {
-    mpfeature = new Feature(strSettingsFile);
+    mnWindowSize = nWindowSize;
+
+    mpfeature = new Feature(strSettingsFile, mnWindowSize);
 
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
 
@@ -39,6 +41,7 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
     mpfeature->ProcessImage(image.clone(), TimeStamps);
 
     mvFraPointsPts = mpfeature->UndistoredPoints(); // mvCurPointsPts
+
     mvFraPointsID = mpfeature->mvPointTrackID;
 
     mvFraFeatures.clear();

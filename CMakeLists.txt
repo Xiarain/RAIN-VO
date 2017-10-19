@@ -24,7 +24,6 @@ include_directories( "/usr/include/eigen3/")
 
 include_directories(
     include
-    ../include
     ${Opencv_INCLUDE_DIRS}
     ${CERES_INCLUDE_DIRS}
 )
@@ -45,7 +44,7 @@ add_executable(VIO
     src/Initializer.cpp
     src/Map.cpp
     src/BenchMark.cpp
-)
+    src/Converter.cpp)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}

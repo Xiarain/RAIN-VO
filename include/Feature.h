@@ -25,7 +25,7 @@ class Feature
 
 public:
 
-    Feature(const string &strSettingsFile);
+    Feature(const string &strSettingsFile, const int nWindowSize);
     ~Feature();
 
     bool ProcessImage(const cv::Mat &im, const double &timestamp);
@@ -46,6 +46,8 @@ public:
         BAD = 3
     };
 
+    int mnWindowSize;
+    
     cv::Mat mMask;
     cv::Mat mImage;
     cv::Mat mNextImage;
@@ -72,7 +74,7 @@ private:
 
     bool mbFirstImage;
     double mFirstImageTime;
-    int numFeatures;
+    int mnumFeatures;
     int minDist;
     uint mIDcnt;
     int mFeatureShow;

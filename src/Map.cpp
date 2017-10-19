@@ -13,13 +13,15 @@ int MapPoint::EndFrame()
 }
 
 
-Map::Map()
+Map::Map(int nWindowSize)
 {
     mlMapPoints.clear();
+
+    mnWindowSize = nWindowSize;
 }
 /**
- * @brief
- * @param frame_count the number of the frame
+ * @brief check the parallax of the frame to label the frame is the keyframe or not
+ * @param frame_count the number of the frame in the slide window
  * @param Feature const vector<pair<int, Eigen::Vector3d>>, make up with the ID and keypoint
  * @return
  */
@@ -48,8 +50,10 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
         else if (it->mnFeatureID == featureID)
         {
             it->mvFeaturePerFrame.push_back(featurePerFrame);
-            mLastTrackNum++; // the number of the point from the last frame has been tracked by this frame
-//            cout << "the ID: " << it->mnFeatureID << " the cnt: " <<  it->mvFeaturePerFrame.size() << endl;
+
+            // the number of the point from the last frame has been tracked by this frame
+            mLastTrackNum++;
+            // cout << "the ID: " << it->mnFeatureID << " the cnt: " <<  it->mvFeaturePerFrame.size() << endl;
         }
     } // for (auto Feature : Features)
 
@@ -60,7 +64,7 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
     for (auto &MapPoint : mlMapPoints)
     {
         // the MapPoint should appear in this frame and the MapPoint also should be appear at least 2 frames
-        if (MapPoint.mnStartFrame <= FrameCount -2 && MapPoint.mnStartFrame + int(MapPoint.mvFeaturePerFrame.size()) - 1 >= FrameCount -1)
+        if (MapPoint.mnStartFrame <= FrameCount - 2 && MapPoint.mnStartFrame + int(MapPoint.mvFeaturePerFrame.size()) - 1 >= FrameCount -1)
         {
             ParallaxSum += ComputeParallax(MapPoint, FrameCount);
             ParallaxNum++;
@@ -73,8 +77,14 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
     }
     else // TODO the threshold of the parallax should be read in the setting file
     {
-        return (ParallaxSum / ParallaxNum >= 10);
+        cout << "the parallaxsum / parallaxnum" << ParallaxSum / ParallaxNum << endl;
+//        return (ParallaxSum / ParallaxNum >= (10/460));
+
+        if (ParallaxSum/ParallaxNum >= (10.0/460))
+            return true;
     }
+
+    return false;
 }
 
 double Map::ComputeParallax(const MapPoint &mapPoint, int FrameCount)
@@ -101,6 +111,12 @@ double Map::ComputeParallax(const MapPoint &mapPoint, int FrameCount)
     return ans;
 }
 
+/**
+ * @brief get the corresponding point in the slide window
+ * @param FrameCount1
+ * @param FrameCount2
+ * @return
+ */
 vector<pair<Eigen::Vector3d, Eigen::Vector3d>> Map::GetCorresponding(int FrameCount1, int FrameCount2)
 {
     vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
@@ -124,5 +140,72 @@ vector<pair<Eigen::Vector3d, Eigen::Vector3d>> Map::GetCorresponding(int FrameCo
 
     return corres;
 };
+
+/**
+ * @brief the frame 0 is the oldest frame, and theframe N is the newest frame in the slide window
+ */
+/**
+ * @brief remove the frame 0
+ */
+void Map::RemoveBack()
+{
+    cout << "map remove back" << endl;
+    for (auto it = mlMapPoints.begin(), itNext = mlMapPoints.begin(); it != mlMapPoints.end(); it = itNext)
+    {
+        itNext++;
+
+        if(it->mnStartFrame != 0)
+            it->mnStartFrame--;
+        else // the feature point start to appear in the 0 ID frame
+        {
+            it->mvFeaturePerFrame.erase(it->mvFeaturePerFrame.begin());
+
+            // when the 3D feature point doesn't have the 2D feature point in the image, it will be removed in the slide window
+            if (it->mvFeaturePerFrame.size() == 0)
+                mlMapPoints.erase(it);
+        }
+    }
+}
+
+/**
+ * @brief remove the frame N
+ * @param FrameCount the number of the current frame
+ */
+void Map::RemoveFront(int FrameCount)
+{
+    cout << "map remove front" << endl;
+    for (auto it = mlMapPoints.begin(), itNext = mlMapPoints.begin(); it != mlMapPoints.end(); it = itNext)
+    {
+        itNext++;
+
+        // throw the N-1 frame, so the 3D feature point in the N frame turn to the N-1 frame
+        if (it->mnStartFrame == FrameCount)
+        {
+            it->mnStartFrame--;
+        }
+        else
+        {
+            int j = mnWindowSize - 1 - it->mnStartFrame;
+
+            it->mvFeaturePerFrame.erase(it->mvFeaturePerFrame.begin() + j);
+
+            // when the 3D feature point doesn't have the 2D feature point in the image, it will be removed in the slide window
+            if (it->mvFeaturePerFrame.size() == 0)
+                mlMapPoints.erase(it);
+        }
+    }
+}
+
+void Map::DebugShow()
+{
+    cout << "the map debug: show the map point in the map" << endl;
+    cout << "the size of the map points" << static_cast<int>(mlMapPoints.size()) << endl;
+
+    cout << "the ID: the number of the used: the start frame" << endl;
+    for (auto point : mlMapPoints)
+    {
+        cout <<  point.mnFeatureID << " " << static_cast<int>(point.mvFeaturePerFrame.size()) << " " << point.mnStartFrame << endl;
+    }
+}
 
 }// namesapce RAIN_VIO
