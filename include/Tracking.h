@@ -25,7 +25,9 @@ namespace RAIN_VIO
 class Camera;
 class Frame;
 class Map;
+class GlobalSFM;
 class Initializer;
+
 
 enum eTrackingState
 {
@@ -81,6 +83,7 @@ public:
     ~Tracking();
     void Track(const cv::Mat &image, const double &TimeStamps);
     void SlideWindow();
+    bool InitialStructure();
 
 private:
 

@@ -17,7 +17,8 @@ namespace RAIN_VIO
 System::System(const string &strSettingsFile, const bool bOpenViwer)
 {
     mnWindowSize = 10;
-    mTracker = new Tracking(strSettingsFile, mnWindowSize);
+    mpTracker = new Tracking(strSettingsFile, mnWindowSize);
+    mpViewer = new Viewer(strSettingsFile);
 
 }
 
@@ -30,7 +31,8 @@ void System::TrackMono(const string &strSettingsFile, const cv::Mat &image, cons
 {
 //    cv::imshow("Raw image", image);
 //    cv::waitKey(5);
-    mTracker->Track(image, TimeStamps);
+    mpTracker->Track(image, TimeStamps);
+//    mpViewer->Run();
 }
 
 

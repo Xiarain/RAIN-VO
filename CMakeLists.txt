@@ -17,6 +17,8 @@ find_package(OpenCV)
 #    endif()
 #endif()
 
+find_package(Pangolin REQUIRED)
+
 
 find_package(Ceres REQUIRED)
 
@@ -26,6 +28,7 @@ include_directories(
     include
     ${Opencv_INCLUDE_DIRS}
     ${CERES_INCLUDE_DIRS}
+    ${Pangolin_INCLUDE_DIRS}
 )
 
 # 添加源文件
@@ -44,11 +47,14 @@ add_executable(VIO
     src/Initializer.cpp
     src/Map.cpp
     src/BenchMark.cpp
-    src/Converter.cpp)
+    src/Converter.cpp
+    src/Viewer.cpp
+)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}
     ${CERES_LIBRARIES}
+    ${Pangolin_LIBRARIES}
 )
 
 

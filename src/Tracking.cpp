@@ -69,10 +69,6 @@ Tracking::~Tracking()
 
 void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
-    Eigen::Matrix3d RelativeR;
-    Eigen::Vector3d RelativeT;
-    int idx = 0;
-
     vector<pair<int, Eigen::Vector3d>> Features;
 
     mCurrentFrame->DetectKeyPoint(image, TimeStamps);
@@ -99,13 +95,10 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
         {
             if (mdFrameCount == mnWindowSize)
             {
-                if (mpinitializer->RelativePose(RelativeR, RelativeT, idx))
+                if (InitialStructure())
                 {
                     etrackingState = OK;
-                    cout << "the initialize the rotation and translation" << endl;
-                    cout << RelativeR << endl;
-                    cout << RelativeT.transpose() << endl;
-                    cout << idx << endl;
+
                 }
                 else
                 {
@@ -122,32 +115,14 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
         {
             SlideWindow();
 
-//            for (size_t i = 0; i < mnWindowSize; i++)
-//            {
-//                vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
-//                corres = mpMap->GetCorresponding(i, mnWindowSize);
-//
-//                cout << static_cast<int>(corres.size()) << endl;
-//
-//                corres.clear();
-//            }
         }
-
-
-//    for (size_t i = 0; i < mnWindowSize; i++)
-//    {
-//        vector<pair<Eigen::Vector3d, Eigen::Vector3d>> corres;
-//        corres = mpMap->GetCorresponding(i, mnWindowSize);
-//
-//        cout << static_cast<int>(corres.size()) << endl;
-//    }
 
     // checke if there are enough correnspondences
 }
 
 void Tracking::SlideWindow()
 {
-    if (eMarginflag == MARGINOLD)
+    if (eMarginflag == MARGINOLD) // remove the frame 0
     {
         if (mdFrameCount == mnWindowSize)
         {
@@ -157,12 +132,68 @@ void Tracking::SlideWindow()
     }
     else
     {
-        if (mdFrameCount == mnWindowSize)
+        if (mdFrameCount == mnWindowSize) // remove the frame N
         {
             mpMap->RemoveFront(mdFrameCount);
         }
     }
 }
 
+
+bool Tracking::InitialStructure()
+{
+    Eigen::Matrix3d RelativeR;
+    Eigen::Vector3d RelativeT;
+    int l = 0;
+
+    Eigen::Quaterniond Q[mdFrameCount+1];
+    Eigen::Vector3d T[mdFrameCount+1];
+    map<int, Eigen::Vector3d> SFMPoint3d;
+
+    vector<SFMFeature> vSFMFeature;
+
+    for (auto &MapPoint : mpMap->mlMapPoints)
+    {
+        int idx = MapPoint.mnStartFrame - 1;
+
+        SFMFeature tmpSFMFeature;
+        tmpSFMFeature.State = false;
+        tmpSFMFeature.Id = MapPoint.mnFeatureID;
+
+        for (auto &FeaturePerFrame : MapPoint.mvFeaturePerFrame)
+        {
+            idx++;
+            Eigen::Vector3d Point3d = FeaturePerFrame.Point;
+
+            tmpSFMFeature.Observation.emplace_back(make_pair(idx, Eigen::Vector2d{Point3d.x(), Point3d.y()}));
+        }
+
+        vSFMFeature.emplace_back(tmpSFMFeature);
+    }
+
+    if (!mpinitializer->RelativePose(RelativeR, RelativeT, l))
+    {
+        cout << "there is not enough parallax between the two frames" << endl;
+        return false;
+    }
+    cout << RelativeR << endl;
+    cout << RelativeT << endl;
+
+    GlobalSFM GSFM;
+
+
+    if (!GSFM.Construct(mdFrameCount+1, Q, T, l, RelativeR, RelativeT, vSFMFeature, SFMPoint3d))
+    {
+        cout << "global SFM failed " << endl;
+        eMarginflag = MARGINOLD;
+        return false;
+    }
+
+
+
+
+
+
+}
 
 } // namespace RAIN_VIO

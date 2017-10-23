@@ -23,7 +23,7 @@ Map::Map(int nWindowSize)
  * @brief check the parallax of the frame to label the frame is the keyframe or not
  * @param frame_count the number of the frame in the slide window
  * @param Feature const vector<pair<int, Eigen::Vector3d>>, make up with the ID and keypoint
- * @return
+ * @return if the frame is the keyframe, return true
  */
 bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features)
 {

@@ -13,6 +13,7 @@
 
 #include "Tracking.h"
 #include "Frame.h"
+#include "Viewer.h"
 
 using namespace std;
 
@@ -26,7 +27,9 @@ class System
 
 private:
 
-    Tracking *mTracker;
+    Tracking *mpTracker;
+    Viewer *mpViewer;
+
 
     std::thread* mptLocalMapping;
     std::thread* mptViewer;
