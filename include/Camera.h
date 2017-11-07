@@ -34,8 +34,6 @@ public:
     void Distortion(const Eigen::Vector2d & p, Eigen::Vector2d & du);
     void LiftProjective(const Eigen::Vector2d &p, Eigen::Vector3d &P);
 
-
-
 }; // class Camera
 
 } // namespace RAIN_VIO

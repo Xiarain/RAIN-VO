@@ -6,7 +6,7 @@
 #include <fstream>
 #include "System.h"
 #include "Initializer.h"
-
+#include <glog/logging.h>
 #include <opencv2/highgui/highgui.hpp>
 
 using namespace std;
@@ -18,10 +18,15 @@ void ReadParameter();
 
 // ./Examples/Monocular/mono_euroc Vocabulary/ORBvoc.txt Examples/Monocular/EuRoC.yaml
 // PATH_TO_SEQUENCE_FOLDER/mav0/cam0/data Examples/Monocular/EuRoC_TimeStamps/SEQUENCE.txt
-int main(void)
+int main(int argc,char* argv[])
 {
+    google::InitGoogleLogging(argv[0]);
+//    google::SetStderrLogging(google::INFO);
+    FLAGS_colorlogtostderr = true;
+    FLAGS_log_dir = "../log";
+    LOG(INFO) << "RAIN VO monocular vision odometry";
 
-   // In order to debug the code in the convenient way, the settings file path is writen in here
+    // In order to debug the code in the convenient way, the settings file path is writen in here
     string strSettingsFile("../config/EuRoC/EuRoC.yaml");
     string strImagePath("../DataSheet/mav0/cam0/data");
     string strTimesPath("../DataSheet/EuRoC_TimeStamps/MH03.txt");
@@ -36,7 +41,7 @@ int main(void)
 
     if (numImages <= 0)
     {
-        cerr << "ERROR: Failed to load images sequences" << endl;
+        LOG(FATAL) << "Failed to load images sequences";
         return 1;
     }
 
@@ -47,13 +52,14 @@ int main(void)
 
         if(image.empty())
         {
-            cerr << "ERROR: Failed to load images at " << vstrImageFilenames[i] << endl;
+            LOG(FATAL) << "Failed to load images at " << vstrImageFilenames[i];
             return 1;
         }
 
         VIO.TrackMono(strSettingsFile, image, vTimestamps[i]);
     }
 
+    google::ShutdownGoogleLogging();
 
     return 0;
 }
@@ -74,7 +80,7 @@ void LoadImagesName(const string &strImagePath, const string &strTimesPath, vect
 
     if (!fTimes.is_open())
     {
-        cerr << "Failed to open time stamp file at " << strTimesPath << endl;
+        LOG(FATAL) << "Failed to open time stamp file at " << strTimesPath << endl;
         exit(-1);
     }
 

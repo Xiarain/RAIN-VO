@@ -82,5 +82,23 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
 
 }
 
+void Frame::SetPose(Eigen::Matrix<double, 3, 4> Tcw)
+{
+    mTcw = Tcw;
+    UpdatePoseMatrices();
+}
+
+/*
+ * use the mTcw to update the other rotation and translation matrices
+ */
+void Frame::UpdatePoseMatrices()
+{
+    mRcw = mTcw.block<3, 3>(0, 0);
+    mtcw = mTcw.block<3, 1>(0, 3);
+
+    mRwc = mRcw.inverse();
+    mtwc = -mRcw.inverse()*mtcw;
+}
+
 
 } // namespace RAIN_VIO

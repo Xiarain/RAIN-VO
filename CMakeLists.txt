@@ -18,9 +18,8 @@ find_package(OpenCV)
 #endif()
 
 find_package(Pangolin REQUIRED)
-
-
 find_package(Ceres REQUIRED)
+find_package(Glog REQUIRED)
 
 include_directories( "/usr/include/eigen3/")
 
@@ -29,6 +28,7 @@ include_directories(
     ${Opencv_INCLUDE_DIRS}
     ${CERES_INCLUDE_DIRS}
     ${Pangolin_INCLUDE_DIRS}
+    BEFORE ${GLOG_INCLUDE_DIRS}
 )
 
 # 添加源文件

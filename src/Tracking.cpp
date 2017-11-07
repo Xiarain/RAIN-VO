@@ -33,7 +33,7 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
 
     if (!fsSettings.isOpened())
     {
-        cerr << "Failed to open settings file at " << strSettingsFile << endl;
+        LOG(FATAL) << "Failed to open settings file at " << strSettingsFile << endl;
         exit(-1);
     }
 
@@ -57,6 +57,12 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
 
     mnumFeatures = fsSettings["ORBextractor.numFeatures"];
     minDist = fsSettings["ORBextractor.minDist"];
+
+    LOG(INFO) << "camera intrinsic parameter" << endl;
+    LOG(INFO) << "K matrix" << endl << CmaeraK << endl;
+    LOG(INFO) << "Distortion coefficient " << DistCoef.t() << endl;
+    LOG(INFO) << "Image height, width: " << ImageHeight << " " << ImageWidth << endl;
+
 
     mCurrentFrame = new Frame(mstrSettingsFile, nWindowSize);
     mpMap = new Map(nWindowSize);
@@ -90,7 +96,6 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
         eMarginflag = MARGINSECONDNEW;
 
-
         if (etrackingState == NO_INITIALIZED)
         {
             if (mdFrameCount == mnWindowSize)
@@ -98,23 +103,18 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
                 if (InitialStructure())
                 {
                     etrackingState = OK;
-
                 }
                 else
                 {
-
                     SlideWindow();
                 }
-
             }
             else
                 mdFrameCount++;
-
         }
         else
         {
             SlideWindow();
-
         }
 
     // checke if there are enough correnspondences
@@ -173,7 +173,7 @@ bool Tracking::InitialStructure()
 
     if (!mpinitializer->RelativePose(RelativeR, RelativeT, l))
     {
-        cout << "there is not enough parallax between the two frames" << endl;
+        LOG(WARNING) << "there is not enough parallax between the two frames" << endl;
         return false;
     }
     cout << RelativeR << endl;
@@ -184,15 +184,10 @@ bool Tracking::InitialStructure()
 
     if (!GSFM.Construct(mdFrameCount+1, Q, T, l, RelativeR, RelativeT, vSFMFeature, SFMPoint3d))
     {
-        cout << "global SFM failed " << endl;
+        LOG(ERROR) << "global SFM failed " << endl;
         eMarginflag = MARGINOLD;
         return false;
     }
-
-
-
-
-
 
 }
 

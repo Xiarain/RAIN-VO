@@ -56,13 +56,13 @@ bool Initializer::SolveRelativeRT(const vector<pair<Eigen::Vector3d, Eigen::Vect
         if (inliercnt < 30)
             return false;
 
-        cout << "in the fundamental matrix, the inlier points of the all points " << inliercnt << "of" << static_cast<int>(Corres.size()) << endl;
+        LOG(INFO) << "The inlier points of the all points " << inliercnt << "of" << static_cast<int>(Corres.size()) << endl;
 
         return true;
     } // (Corres.size() > 15)
     else
     {
-        cout << "the number of the correspendences is less than 15" << endl;
+        LOG(WARNING) << "The number of the correspendences is less than 15" << endl;
         return false;
     }
 
@@ -111,13 +111,13 @@ bool Initializer::RelativePose(Eigen::Matrix3d &RelativeR, Eigen::Vector3d &Rela
         }
         else
         {
-            cout << "Warning: the number of the corresponding point between the two image is too littel:"
+            LOG(WARNING)  << "The number of the corresponding point between the two image is too littel:"
                  << static_cast<int>(corres.size()) << endl;
             continue;
         }
     }
 
-    cout << "Warning:  solution of the F matrix in the initializtion can't be got " << endl;
+    LOG(WARNING) << "Solution of the F matrix in the initializtion can't be got " << endl;
     return false;
 }
 
@@ -180,7 +180,7 @@ bool GlobalSFM::SolveFrameByPnP(Eigen::Matrix3d &RInitial, Eigen::Vector3d &PIni
 
     if (static_cast<int>(vPoint2D.size()) < 15)
     {
-        cout << "the matches is short in the PnP solution" <<endl;
+        LOG(WARNING) << "the matches is short in the PnP solution" <<endl;
         return false;
     }
 
@@ -200,7 +200,7 @@ bool GlobalSFM::SolveFrameByPnP(Eigen::Matrix3d &RInitial, Eigen::Vector3d &PIni
 
     if (!cv::solvePnP(vPoint3D, vPoint2D, K, D, rvec, t, 1))
     {
-        cout << " failed in solving the PnP problem " << endl;
+        LOG(ERROR) << " failed in solving the PnP problem " << endl;
         return false;
     }
 
@@ -222,7 +222,7 @@ void GlobalSFM::TriangulateTwoFrames(int Frame0Count, Eigen::Matrix<double, 3, 4
 {
     if (Frame0Count == Frame1Count)
     {
-        cout << "the index of the two frames should not be same" << endl;
+        LOG(FATAL) << "the index of the two frames should not be same" << endl;
         return;
     }
 
@@ -270,7 +270,7 @@ void GlobalSFM::TriangulateTwoFrames(int Frame0Count, Eigen::Matrix<double, 3, 4
  * @param Rqcw rotation by the quaternion
  * @param tcw
  * @param l the frame has the big parallax between the l frame and the newest frame in the slide window
- * @param RelativeR
+ * @param RelativeR the relation of the two frames which have the big parallax
  * @param RealtiveT
  * @param vSFMFeature
  * @param SFMTrackedPoints
@@ -288,6 +288,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector
     Rqcw[l].z() = 0;
     tcw[l].setZero();
 
+    // the coordination of the newest frame
     Rqcw[FrameNum-1] = Rqcw[l]*Eigen::Quaterniond(RelativeR);
     tcw[FrameNum-1] = RealtiveT;
 

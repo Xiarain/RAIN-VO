@@ -21,20 +21,35 @@ class Frame
 {
 
 public:
+
     int mnWindowSize;
-
     cv::Mat mImageShow;
-
     vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
     vector<cv::Point2f> mvFraPointsPts;
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
 
     Frame(const string &strSettingsFile, const int nWindowSize);
+
     ~Frame();
+
     void DetectKeyPoint(const cv::Mat &image, const double &TimeStamps);
 
+    void SetPose(Eigen::Matrix<double, 3, 4> Tcw);
+
+    void UpdatePoseMatrices();
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 private:
+
+    Eigen::Matrix3d mRcw;
+    Eigen::Vector3d mtcw;
+    Eigen::Matrix3d mRwc;
+    Eigen::Vector3d mtwc;
+    Eigen::Matrix<double, 3, 4> mTcw;
+    Eigen::Matrix<double, 3, 4> mTwc;
+
     Feature *mpfeature;
     double ImageHeight;
     double ImageWidth;
