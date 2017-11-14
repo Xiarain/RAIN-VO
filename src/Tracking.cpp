@@ -79,13 +79,10 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 
     mCurrentFrame->DetectKeyPoint(image, TimeStamps);
 
-//    if (mlpFrames.size() > 1)
-//    {
-//        cv::drawMatches(mlpFrames.back()->mImageShow, mlpFrames.back()->mvFraPointsPts, mCurrentFrame->mImageShow, mCurrentFrame->mvFraPointsPts, );
-//    }
-
     // the list of the map point
     mlpFrames.emplace_back(mCurrentFrame);
+
+//    LOG(INFO) << "mlpFrames " << mlpFrames.size() << endl;
 
     // whether keyframe or not
     if (mpMap->AddFeatureCheckParallax(mdFrameCount, mCurrentFrame->mvFraFeatures))
@@ -96,26 +93,26 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
         eMarginflag = MARGINSECONDNEW;
 
-        if (etrackingState == NO_INITIALIZED)
+    if (etrackingState == NO_INITIALIZED)
+    {
+        if (mdFrameCount == mnWindowSize)
         {
-            if (mdFrameCount == mnWindowSize)
+            if (InitialStructure())
             {
-                if (InitialStructure())
-                {
-                    etrackingState = OK;
-                }
-                else
-                {
-                    SlideWindow();
-                }
+                etrackingState = OK;
             }
             else
-                mdFrameCount++;
+            {
+                SlideWindow();
+            }
         }
         else
-        {
-            SlideWindow();
-        }
+            mdFrameCount++;
+    }
+    else
+    {
+        SlideWindow();
+    }
 
     // checke if there are enough correnspondences
 }
@@ -127,8 +124,9 @@ void Tracking::SlideWindow()
         if (mdFrameCount == mnWindowSize)
         {
             mpMap->RemoveBack();
-        }
 
+            mlpFrames.pop_front();
+        }
     }
     else
     {
@@ -146,12 +144,13 @@ bool Tracking::InitialStructure()
     Eigen::Vector3d RelativeT;
     int l = 0;
 
-    Eigen::Quaterniond Q[mdFrameCount+1];
-    Eigen::Vector3d T[mdFrameCount+1];
+    Eigen::Quaterniond Rqwc[mdFrameCount+1];
+    Eigen::Vector3d twc[mdFrameCount+1];
     map<int, Eigen::Vector3d> SFMPoint3d;
 
     vector<SFMFeature> vSFMFeature;
 
+    // MapPoint
     for (auto &MapPoint : mpMap->mlMapPoints)
     {
         int idx = MapPoint.mnStartFrame - 1;
@@ -171,22 +170,25 @@ bool Tracking::InitialStructure()
         vSFMFeature.emplace_back(tmpSFMFeature);
     }
 
+    // RelativeR Rij, i == l == 0
     if (!mpinitializer->RelativePose(RelativeR, RelativeT, l))
     {
         LOG(WARNING) << "there is not enough parallax between the two frames" << endl;
         return false;
     }
-    cout << RelativeR << endl;
-    cout << RelativeT << endl;
 
     GlobalSFM GSFM;
 
-
-    if (!GSFM.Construct(mdFrameCount+1, Q, T, l, RelativeR, RelativeT, vSFMFeature, SFMPoint3d))
+    if (!GSFM.Construct(mdFrameCount+1, Rqwc, twc, l, RelativeR, RelativeT, vSFMFeature, SFMPoint3d))
     {
         LOG(ERROR) << "global SFM failed " << endl;
         eMarginflag = MARGINOLD;
         return false;
+    }
+
+    for (int i = 0; i < mdFrameCount; i++)
+    {
+
     }
 
 }

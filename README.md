@@ -14,9 +14,11 @@ Tested with OpenCV 3.2.
 ```sh
 download new version gflag and compile.
 
-$mkdir build & cd build
+$ git clone https://github.com/gflags/gflags.git
 
-$cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC ..
+$ mkdir build & cd build
+
+$ cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC ..
 
 $ make & sudo make install
 
@@ -25,6 +27,10 @@ $ git clone https://github.com/google/glog.git
 $ cd glog
 
 $ mkdir build && cd build
+
+maybe you need to install cmake3
+
+$ sudo apt-get install cmake3
 
 $ export CXXFLAGS="-fPIC" && cmake .. && make VERBOSE=1
 
@@ -47,4 +53,13 @@ $ mkdir build
 $ cd build
 
 $ make -j2
+```
+
+## problem
+
+1. can not find the Eigen3Config.cmake
+maybe you have two versions cmake, you could find the Eigen3Config.cmake in the lower version cmake.
+
+```sh
+$ sudo cp /usr/share/cmake-2.8/Modules/FindEigen3.cmake /usr/share/cmake-3.2/Modules/
 ```

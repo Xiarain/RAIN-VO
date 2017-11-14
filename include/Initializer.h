@@ -37,14 +37,14 @@ struct ReprojectionError
     ReprojectionError(double observedu, double observedv) : observedu(observedu), observedv(observedv){}
 
     template <typename T>
-    bool operator()( const T* const Rwc, const T* const twc, const T* const Point3D, T* resuduals) const
+    bool operator()( const T* const Rcw, const T* const tcw, const T* const Point3D, T* resuduals) const
     {
         T Point2D[3];
 
-        ceres::QuaternionRotatePoint(Rwc, Point3D, Point2D);
-        Point2D[0] += twc[0];
-        Point2D[1] += twc[1];
-        Point2D[2] += twc[2];
+        ceres::QuaternionRotatePoint(Rcw, Point3D, Point2D);
+        Point2D[0] += tcw[0];
+        Point2D[1] += tcw[1];
+        Point2D[2] += tcw[2];
 
         // there is very important thing, the observed feature points have been normalized in the pinhole camera model
         T xp = Point2D[0]/Point2D[2];

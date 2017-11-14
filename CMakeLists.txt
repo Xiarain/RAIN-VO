@@ -5,11 +5,11 @@ set( CMAKE_CXX_FLAGS "-std=c++11" )
 
 project(RAIN-VIO)
 
-set(OpenCV_DIR "/home/rain/workspace/Library/opencv3/share/OpenCV")
+set(OpenCV_DIR "/home/rain/workspace/library/opencv-3.2.0/install/share/OpenCV")
 #set(Eigen3_DIR "/home/rain/workspace/Library/eigen3")
 
 
-find_package(OpenCV)
+find_package(OpenCV REQUIRED)
 #if(NOT OpenCV_FOUND)
 #    find_package(OpenCV 2.4.3 QUIET)
 #    if(NOT OpenCV_FOUND)

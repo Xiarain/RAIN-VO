@@ -145,7 +145,7 @@ vector<pair<Eigen::Vector3d, Eigen::Vector3d>> Map::GetCorresponding(int FrameCo
  * @brief the frame 0 is the oldest frame, and theframe N is the newest frame in the slide window
  */
 /**
- * @brief remove the frame 0
+ * @brief remove the map point in the frame 0
  */
 void Map::RemoveBack()
 {

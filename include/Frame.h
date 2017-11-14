@@ -22,6 +22,9 @@ class Frame
 
 public:
 
+    Eigen::Matrix<double, 3, 4> mTcw;
+    Eigen::Matrix<double, 3, 4> mTwc;
+
     int mnWindowSize;
     cv::Mat mImageShow;
     vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
@@ -37,6 +40,10 @@ public:
 
     void SetPose(Eigen::Matrix<double, 3, 4> Tcw);
 
+    void SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc);
+
+    Eigen::Matrix<double, 3, 4> GetPose();
+
     void UpdatePoseMatrices();
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -47,8 +54,6 @@ private:
     Eigen::Vector3d mtcw;
     Eigen::Matrix3d mRwc;
     Eigen::Vector3d mtwc;
-    Eigen::Matrix<double, 3, 4> mTcw;
-    Eigen::Matrix<double, 3, 4> mTwc;
 
     Feature *mpfeature;
     double ImageHeight;

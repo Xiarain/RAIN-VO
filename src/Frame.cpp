@@ -88,6 +88,21 @@ void Frame::SetPose(Eigen::Matrix<double, 3, 4> Tcw)
     UpdatePoseMatrices();
 }
 
+void Frame::SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc)
+{
+    mTwc = Twc;
+
+    mRwc = mTwc.block<3, 3>(0, 0);
+    mtwc = mTwc.block<3, 1>(0, 3);
+
+    mRcw = mRwc.inverse();
+    mtcw = -mRwc.inverse()*mtwc;
+
+    mTcw.block<3, 3>(0, 0) = mRcw;
+    mTcw.block<3, 1>(0, 3) = mtcw;
+
+}
+
 /*
  * use the mTcw to update the other rotation and translation matrices
  */
@@ -98,6 +113,9 @@ void Frame::UpdatePoseMatrices()
 
     mRwc = mRcw.inverse();
     mtwc = -mRcw.inverse()*mtcw;
+
+    mTwc.block<3, 3>(0, 0) = mRwc;
+    mTwc.block<3, 1>(0, 3) = mtwc;
 }
 
 

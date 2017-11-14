@@ -5,10 +5,22 @@
 #ifndef RAIN_VIO_KEYFRAME_H
 #define RAIN_VIO_KEYFRAME_H
 
+
+#include "Frame.h"
+#include "Map.h"
+
 namespace RAIN_VIO
 {
 
-class KeyFrame {
+class Frame;
+class Map;
+
+class KeyFrame
+{
+public:
+    KeyFrame(Frame &F, Map* pMap);
+
+    void SetPose(Eigen::Matrix<double, 3, 4> Tcw);
 
 };
 

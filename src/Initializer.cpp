@@ -18,6 +18,13 @@ Initializer::Initializer(cv::Mat _CmaeraK, Map *_Map, int nWindowSize) :mpMap(_M
     mnWindowSize = nWindowSize;
 }
 
+/**
+ *
+ * @param Corres
+ * @param Rotation rotaion from p2 keyframe to p1 keyframe
+ * @param Translation translation from p2 keyframe to p1 keyframe
+ * @return
+ */
 bool Initializer::SolveRelativeRT(const vector<pair<Eigen::Vector3d, Eigen::Vector3d>> &Corres,
                                   Eigen::Matrix3d &Rotation, Eigen::Vector3d &Translation)
 {
@@ -85,8 +92,6 @@ bool Initializer::RelativePose(Eigen::Matrix3d &RelativeR, Eigen::Vector3d &Rela
 
         corres = mpMap->GetCorresponding(i, mnWindowSize);
 
-        cout << static_cast<int>(corres.size()) << endl;
-
         if (corres.size() > 20)
         {
             double ParallaxSum = 0;
@@ -121,7 +126,14 @@ bool Initializer::RelativePose(Eigen::Matrix3d &RelativeR, Eigen::Vector3d &Rela
     return false;
 }
 
-
+/**
+ * @brief
+ * @param Pose0 Tcw0
+ * @param Pose1 Tcw1
+ * @param Point0
+ * @param Point1
+ * @param Point3d output the 3D mappoint
+ */
 void GlobalSFM::TriangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0, Eigen::Matrix<double, 3, 4> &Pose1,
                                  Eigen::Vector2d &Point0, Eigen::Vector2d &Point1, Eigen::Vector3d &Point3d)
 {
@@ -270,90 +282,90 @@ void GlobalSFM::TriangulateTwoFrames(int Frame0Count, Eigen::Matrix<double, 3, 4
  * @param Rqcw rotation by the quaternion
  * @param tcw
  * @param l the frame has the big parallax between the l frame and the newest frame in the slide window
- * @param RelativeR the relation of the two frames which have the big parallax
- * @param RealtiveT
+ * @param RelativeR Rji the relation of the two frames which have the big parallax
+ * @param RealtiveT tji
  * @param vSFMFeature
  * @param SFMTrackedPoints
  * @return
  */
-bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector3d *tcw, int l,
+bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector3d *twc, int l,
                            const Eigen::Matrix3d RelativeR, const Eigen::Vector3d RealtiveT,
                            vector<SFMFeature> &vSFMFeature, map<int, Eigen::Vector3d> &SFMTrackedPoints)
 {
     mnFeatureNum = (int)vSFMFeature.size();
 
-    Rqcw[l].w() = 1;
-    Rqcw[l].x() = 0;
-    Rqcw[l].y() = 0;
-    Rqcw[l].z() = 0;
-    tcw[l].setZero();
+    Rqwc[l].w() = 1;
+    Rqwc[l].x() = 0;
+    Rqwc[l].y() = 0;
+    Rqwc[l].z() = 0;
+    twc[l].setZero();
 
     // the coordination of the newest frame
-    Rqcw[FrameNum-1] = Rqcw[l]*Eigen::Quaterniond(RelativeR);
-    tcw[FrameNum-1] = RealtiveT;
+    Rqwc[FrameNum-1] = Rqwc[l]*Eigen::Quaterniond(RelativeR);
+    twc[FrameNum-1] = RealtiveT;
 
-    Eigen::Matrix3d Rwc[FrameNum]; //RotationCam
-    Eigen::Vector3d twc[FrameNum]; // TranslationCam
-    Eigen::Quaterniond Rqwc[FrameNum]; // QuatCam
-
-    Eigen::Matrix<double, 3, 4> Twc[FrameNum]; // Pose
+    // Tcw
+    Eigen::Matrix3d Rcw[FrameNum];
+    Eigen::Vector3d tcw[FrameNum];
+    Eigen::Quaterniond Rqcw[FrameNum];
+    Eigen::Matrix<double, 3, 4> Tcw[FrameNum];
 
     // just the transformation matrix's inverse
-    Rqwc[l] = Rqcw[l].inverse();
-    Rwc[l] = Rqwc[l].toRotationMatrix();
-    twc[l] = -1*Rwc[l]*tcw[l];
-    Twc[l].block<3, 3>(0, 0) = Rwc[l];
-    Twc[l].block<3, 1>(0, 3) = twc[l];
+    Rqcw[l] = Rqwc[l].inverse();
+    Rcw[l] = Rqcw[l].toRotationMatrix();
+    tcw[l] = -Rcw[l]*twc[l];
+    Tcw[l].block<3, 3>(0, 0) = Rcw[l];
+    Tcw[l].block<3, 1>(0, 3) = tcw[l];
 
-    Rqwc[FrameNum-1] = Rqcw[FrameNum-1].inverse();
-    Rwc[FrameNum-1] = Rqwc[FrameNum-1].toRotationMatrix();
-    twc[FrameNum-1] = -1*Rwc[FrameNum-1]*tcw[FrameNum-1];
-    Twc[FrameNum-1].block<3, 3>(0, 0) = Rwc[FrameNum-1];
-    Twc[FrameNum-1].block<3, 1>(0, 3) = twc[FrameNum-1];
+    Rqcw[FrameNum-1] = Rqwc[FrameNum-1].inverse();
+    Rcw[FrameNum-1] = Rqcw[FrameNum-1].toRotationMatrix();
+    tcw[FrameNum-1] = -Rcw[FrameNum-1]*twc[FrameNum-1];
+    Tcw[FrameNum-1].block<3, 3>(0, 0) = Rcw[FrameNum-1];
+    Tcw[FrameNum-1].block<3, 1>(0, 3) = tcw[FrameNum-1];
 
     for (int i = l; i < FrameNum - 1; i++)
     {
         if (i > l)
         {
-            Eigen::Matrix3d RInitial = Rwc[i-1];
-            Eigen::Vector3d PInitial = twc[i-1];
+            Eigen::Matrix3d RInitial = Rcw[i-1];
+            Eigen::Vector3d PInitial = tcw[i-1];
 
             if (!SolveFrameByPnP(RInitial, PInitial, i, vSFMFeature))
             {
                 return false;
             }
 
-            Rwc[i] = RInitial; // this is Rcw in the true meaning
-            twc[i] = PInitial;
-            Rqwc[i] = Rwc[i];
+            Rcw[i] = RInitial;
+            tcw[i] = PInitial;
+            Rqcw[i] = Rcw[i];
 
-            Twc[i].block<3, 3>(0, 0) = Rwc[i];
-            Twc[i].block<3, 1>(0, 3) = twc[i];
+            Tcw[i].block<3, 3>(0, 0) = Rcw[i];
+            Tcw[i].block<3, 1>(0, 3) = tcw[i];
         }
 
-        TriangulateTwoFrames(i, Twc[i], FrameNum-1, Twc[FrameNum-1], vSFMFeature);
+        TriangulateTwoFrames(i, Tcw[i], FrameNum-1, Tcw[FrameNum-1], vSFMFeature);
     }
 
     for (int i = l+1; i < FrameNum-1; i++)
     {
-        TriangulateTwoFrames(l, Twc[l], i, Twc[i], vSFMFeature);
+        TriangulateTwoFrames(l, Tcw[l], i, Tcw[i], vSFMFeature);
     }
 
     for (int i = l-1; i >= 0; i--)
     {
-        Eigen::Matrix3d RInitial = Rwc[i+1];
-        Eigen::Vector3d PInitial = twc[i+1];
+        Eigen::Matrix3d RInitial = Rcw[i+1];
+        Eigen::Vector3d PInitial = tcw[i+1];
 
         if (!SolveFrameByPnP(RInitial, PInitial, i, vSFMFeature))
             return false;
 
-        Rwc[i] = RInitial;
-        twc[i] = PInitial;
-        Rqwc[i] = Rwc[i];
-        Twc[i].block<3, 3>(0, 0) = Rwc[i];
-        Twc[i].block<3, 1>(0, 3) = twc[i];
+        Rcw[i] = RInitial;
+        tcw[i] = PInitial;
+        Rqcw[i] = Rcw[i];
+        Tcw[i].block<3, 3>(0, 0) = Rcw[i];
+        Tcw[i].block<3, 1>(0, 3) = tcw[i];
 
-        TriangulateTwoFrames(i, Twc[i], l, Twc[l], vSFMFeature);
+        TriangulateTwoFrames(i, Tcw[i], l, Tcw[l], vSFMFeature);
     }
 
     for (int i = 0; i < mnFeatureNum; i++)
@@ -374,62 +386,57 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector
 
             Eigen::Vector3d Point3d;
 
-            TriangulatePoint(Twc[Frame0], Twc[Frame1], Point2d0, Point2d1, Point3d);
+            TriangulatePoint(Tcw[Frame0], Tcw[Frame1], Point2d0, Point2d1, Point3d);
 
             vSFMFeature[i].State = true;
             vSFMFeature[i].Position = Point3d;
         }
     }
 
-    for (int i = 0; i < FrameNum; i++)
+    for (int i = 0; i < FrameNum; i++) // Rcw
     {
-        cout << "the camera pose in the SFM " << i << " frame" <<endl;
-        cout << Converter::toEuler(Eigen::Quaterniond(Rwc[i])).transpose() << endl;
-        cout << twc[i].transpose() << endl;
+        LOG(INFO) << "the camera pose in the SFM " << i << " frame" <<endl;
+        LOG(INFO) << "Euler: " <<Converter::toEuler(Eigen::Quaterniond(Rcw[i])).transpose() << " t:"  << tcw[i].transpose() << endl;
     }
 
     ceres::Problem problem;
     ceres::LocalParameterization* localparameterization = new ceres::QuaternionParameterization();
 
-    double Rdwc[FrameNum][4];
-    double tdwc[FrameNum][4];
+    double Rdcw[FrameNum][4];
+    double tdcw[FrameNum][4];
     double Point3dw[mnFeatureNum][3];
-//    Eigen::Matrix<double, 3, 4> Twc[FrameNum];
 
     // the camera parameter
     for (int i = 0; i < FrameNum; i++)
     {
-        tdwc[i][0] = twc[i][0];
-        tdwc[i][1] = twc[i][1];
-        tdwc[i][2] = twc[i][2];
+        tdcw[i][0] = tcw[i][0];// tdcw
+        tdcw[i][1] = tcw[i][1];
+        tdcw[i][2] = tcw[i][2];
 
-        Rdwc[i][0] = Rqwc[i].w();
-        Rdwc[i][1] = Rqwc[i].x();
-        Rdwc[i][2] = Rqwc[i].y();
-        Rdwc[i][3] = Rqwc[i].z();
+        Rdcw[i][0] = Rqcw[i].w(); // Rdcw
+        Rdcw[i][1] = Rqcw[i].x();
+        Rdcw[i][2] = Rqcw[i].y();
+        Rdcw[i][3] = Rqcw[i].z();
 
-        problem.AddParameterBlock(Rdwc[i], 4, localparameterization);
-        problem.AddParameterBlock(tdwc[i], 3);
+        problem.AddParameterBlock(Rdcw[i], 4, localparameterization);
+        problem.AddParameterBlock(tdcw[i], 3);
 
         if (i == l)
         {
-            problem.SetParameterBlockConstant(Rdwc[i]);
+            problem.SetParameterBlockConstant(Rdcw[i]);
         }
 
         if (i == l || i == FrameNum-1)
         {
-            problem.SetParameterBlockConstant(tdwc[i]);
+            problem.SetParameterBlockConstant(tdcw[i]);
         }
     }
 
-    cout << "the 3D feature point" << endl;
     // the 3D feature point parameter
     for (int i = 0; i < mnFeatureNum; i++)
     {
         if (!vSFMFeature[i].State)
             continue;
-
-        cout << i << " " << vSFMFeature[i].Position.transpose() <<endl;
 
         for (int j = 0; j < int(vSFMFeature[i].Observation.size()); j++)
         {
@@ -442,7 +449,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector
             Point3dw[i][1] = vSFMFeature[i].Position[1];
             Point3dw[i][2] = vSFMFeature[i].Position[2];
 
-            problem.AddResidualBlock(costFunction, NULL, Rdwc[idxcamera], tdwc[idxcamera], Point3dw[i]);
+            problem.AddResidualBlock(costFunction, NULL, Rdcw[idxcamera], tdcw[idxcamera], Point3dw[i]);
         }
     }
 
@@ -453,20 +460,42 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
-    std::cout << summary.BriefReport() << endl;
+    LOG(INFO) << summary.BriefReport() << endl;
 
-    if (summary.termination_type == ceres::CONVERGENCE || summary.final_cost < 5e-03)
+    if (summary.termination_type == ceres::CONVERGENCE || (summary.final_cost > 0  && summary.final_cost < 5e-03) )
     {
-        cout << "the BA of SFM converge" << endl;
+        LOG(INFO) << "the BA of SFM converge" << endl;
+        return true;
     }
     else
     {
-        cout << "the BA of SFM can't converge" << endl;
+        LOG(ERROR) << "the BA of SFM can't converge" << endl;
         return false;
     }
 
+    // Rwc
+    for (int i = 0; i < FrameNum; i++)
+    {
+        Rqwc[i].w() = Rdcw[i][0];
+        Rqwc[i].x() = Rdcw[i][1];
+        Rqwc[i].y() = Rdcw[i][2];
+        Rqwc[i].z() = Rdcw[i][3];
 
+        Rqwc[i] = Rqwc[i].inverse();
+    }
 
+    for (int i = 0; i < FrameNum; i++)
+    {
+        twc[i] = -1*Rqwc[i]*Eigen::Vector3d(tdcw[i][0], tdcw[i][1], tdcw[i][2]);
+    }
+
+    for (size_t i = 0; i < vSFMFeature.size(); i++)
+    {
+        if (vSFMFeature[i].State)
+        SFMTrackedPoints[vSFMFeature[i].Id] =  Eigen::Vector3d(vSFMFeature[i].Position[0], vSFMFeature[i].Position[1], vSFMFeature[i].Position[2]);
+    };
+
+    return true;
 }
 
 
