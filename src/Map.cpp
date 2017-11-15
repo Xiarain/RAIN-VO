@@ -77,7 +77,7 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
     }
     else // TODO the threshold of the parallax should be read in the setting file
     {
-        cout << "the parallaxsum / parallaxnum" << ParallaxSum / ParallaxNum << endl;
+        cout << "the parallaxsum / parallaxnum " << ParallaxSum / ParallaxNum << endl;
 //        return (ParallaxSum / ParallaxNum >= (10/460));
 
         if (ParallaxSum/ParallaxNum >= (10.0/460))

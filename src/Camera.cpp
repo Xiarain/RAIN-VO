@@ -30,6 +30,13 @@ Camera::Camera(const string &strSettingsFile)
 
     mImageHeight = fsSettings["Camera.height"];
     mImageWidth = fsSettings["Camera.width"];
+
+    mImageGridHeight = fsSettings["ImageGridHeight"];
+    mImageGridWidth = fsSettings["ImageGridWidth"];
+
+    mnumFeatures = fsSettings["ORBextractor.numFeatures"];
+    minDist = fsSettings["ORBextractor.minDist"];
+    mFeatureShow = fsSettings["Viewer.FeatureShow"];
 }
 
 /**

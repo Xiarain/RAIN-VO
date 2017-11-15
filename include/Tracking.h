@@ -48,13 +48,13 @@ class Tracking
 
 public:
 
-    Camera *mpcamera;
+    Camera *mpCamera;
     Map *mpMap;
-    Initializer *mpinitializer;
-    Frame *mCurrentFrame;
-    Feature *feature;
+    Initializer *mpInitializer;
+    Feature *mpFeature;
 
-    list<Frame *> mlpFrames;
+    map<size_t, Frame *> mmpFrames;
+    map<size_t, Frame *> mmpFramesWin;
 
     eTrackingState etrackingState;
     eMarginFlag eMarginflag;
@@ -74,7 +74,7 @@ public:
     double ImageGridHeight;
     double ImageGridWidth;
 
-    int mdFrameCount;
+    size_t mdFrameCount;
 
     int mnWindowSize;
 

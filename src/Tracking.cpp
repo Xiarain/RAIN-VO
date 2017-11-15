@@ -25,9 +25,7 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
     etrackingState = NO_INITIALIZED;
     mnWindowSize = nWindowSize;
 
-    mlpFrames.clear();
-
-    mpcamera = new Camera(strSettingsFile);
+    mmpFrames.clear();
 
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
 
@@ -58,15 +56,22 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
     mnumFeatures = fsSettings["ORBextractor.numFeatures"];
     minDist = fsSettings["ORBextractor.minDist"];
 
-    LOG(INFO) << "camera intrinsic parameter" << endl;
-    LOG(INFO) << "K matrix" << endl << CmaeraK << endl;
-    LOG(INFO) << "Distortion coefficient " << DistCoef.t() << endl;
-    LOG(INFO) << "Image height, width: " << ImageHeight << " " << ImageWidth << endl;
+    LOG(INFO) << "Camera Parameters: " << endl;
+    LOG(INFO) << "- fx: " << CmaeraK.at<float>(0, 0) << endl;
+    LOG(INFO) << "- fy: " << CmaeraK.at<float>(1, 1) << endl;
+    LOG(INFO) << "- cx: " << CmaeraK.at<float>(0, 2) << endl;
+    LOG(INFO) << "- cy: " << CmaeraK.at<float>(1, 2) << endl;
+    LOG(INFO) << "- k1: " << DistCoef.at<float>(0) << endl;
+    LOG(INFO) << "- k2: " << DistCoef.at<float>(1) << endl;
+    LOG(INFO) << "- p1: " << DistCoef.at<float>(2) << endl;
+    LOG(INFO) << "- p2: " << DistCoef.at<float>(3) << endl;
+    LOG(INFO) << "- Image height: " << ImageHeight << endl;
+    LOG(INFO) << "- Image width: " << ImageWidth << endl;
 
-
-    mCurrentFrame = new Frame(mstrSettingsFile, nWindowSize);
     mpMap = new Map(nWindowSize);
-    mpinitializer = new Initializer(CmaeraK, mpMap, nWindowSize);
+    mpInitializer = new Initializer(CmaeraK, mpMap, nWindowSize);
+    mpCamera = new Camera(strSettingsFile);
+    mpFeature = new Feature(mpCamera, strSettingsFile, mnWindowSize);
 }
 
 Tracking::~Tracking()
@@ -77,15 +82,15 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
     vector<pair<int, Eigen::Vector3d>> Features;
 
-    mCurrentFrame->DetectKeyPoint(image, TimeStamps);
+    Frame CurrentFrame(mpCamera, mpFeature, mstrSettingsFile, mnWindowSize);
+
+    CurrentFrame.DetectKeyPoint(image, TimeStamps);
 
     // the list of the map point
-    mlpFrames.emplace_back(mCurrentFrame);
-
-//    LOG(INFO) << "mlpFrames " << mlpFrames.size() << endl;
+    mmpFrames.insert(make_pair(mdFrameCount, &CurrentFrame));
 
     // whether keyframe or not
-    if (mpMap->AddFeatureCheckParallax(mdFrameCount, mCurrentFrame->mvFraFeatures))
+    if (mpMap->AddFeatureCheckParallax(mdFrameCount, CurrentFrame.mvFraFeatures))
     {
         // this is a keyframe
         eMarginflag = MARGINOLD;
@@ -113,8 +118,6 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     {
         SlideWindow();
     }
-
-    // checke if there are enough correnspondences
 }
 
 void Tracking::SlideWindow()
@@ -125,7 +128,7 @@ void Tracking::SlideWindow()
         {
             mpMap->RemoveBack();
 
-            mlpFrames.pop_front();
+//            mmpFrames.erase(mmpFrames.begin(), );
         }
     }
     else
@@ -171,7 +174,7 @@ bool Tracking::InitialStructure()
     }
 
     // RelativeR Rij, i == l == 0
-    if (!mpinitializer->RelativePose(RelativeR, RelativeT, l))
+    if (!mpInitializer->RelativePose(RelativeR, RelativeT, l))
     {
         LOG(WARNING) << "there is not enough parallax between the two frames" << endl;
         return false;
@@ -190,7 +193,6 @@ bool Tracking::InitialStructure()
     {
 
     }
-
 }
 
 } // namespace RAIN_VIO

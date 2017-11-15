@@ -55,7 +55,7 @@ $ cd build
 $ make -j2
 ```
 
-## problem
+## FAQ
 
 1. can not find the Eigen3Config.cmake
 maybe you have two versions cmake, you could find the Eigen3Config.cmake in the lower version cmake.

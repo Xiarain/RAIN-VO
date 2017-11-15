@@ -29,6 +29,12 @@ public:
     double mcy;
     int mImageHeight;
     int mImageWidth;
+    int mnumFeatures;
+    int minDist;
+    int mFeatureShow;
+
+    double mImageGridHeight;
+    double mImageGridWidth;
 
     Camera(const string &strSettingsFile);
     void Distortion(const Eigen::Vector2d & p, Eigen::Vector2d & du);

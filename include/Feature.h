@@ -25,7 +25,7 @@ class Feature
 
 public:
 
-    Feature(const string &strSettingsFile, const int nWindowSize);
+    Feature(Camera *pCamera, const string &strSettingsFile, const int nWindowSize);
     ~Feature();
 
     bool ProcessImage(const cv::Mat &im, const double &timestamp);
@@ -37,7 +37,7 @@ public:
     vector<cv::Point2f> UndistoredPoints();
     cv::Mat UndistoredImage(const cv::Mat image);
 
-    Camera *mpcamera;
+    Camera *mpCamera;
 
     enum eTrackingState {
         NO_INITIALIZED = 0,

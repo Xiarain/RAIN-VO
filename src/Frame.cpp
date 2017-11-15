@@ -7,28 +7,19 @@
 namespace RAIN_VIO
 {
 
-Frame::Frame(const string &strSettingsFile, const int nWindowSize)
+Frame::Frame(Camera *pCamera, Feature *pFeature, const string &strSettingsFile, const int nWindowSize)
 {
     mnWindowSize = nWindowSize;
 
-    mpfeature = new Feature(strSettingsFile, mnWindowSize);
+    mpFeature = pFeature;
+    mpCamera = pCamera;
 
-    cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
-
-    if (!fsSettings.isOpened())
-    {
-        cerr << "Failed to open settings file at " << strSettingsFile << endl;
-        exit(-1);
-    }
-
-    ImageHeight = fsSettings["Camera.height"];
-    ImageWidth = fsSettings["Camera.width"];
-
+    ImageHeight = mpCamera->mImageHeight;
+    ImageWidth = mpCamera->mImageWidth;
 }
 
 Frame::~Frame()
 {
-    delete mpfeature;
 }
 
 void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
@@ -36,13 +27,15 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
     mvFraPointsPts.clear();
     mvFraPointsID.clear();
 
+#if 0
     mImageShow = image.clone();
+#endif
 
-    mpfeature->ProcessImage(image.clone(), TimeStamps);
+    mpFeature->ProcessImage(image, TimeStamps);
 
-    mvFraPointsPts = mpfeature->UndistoredPoints(); // mvCurPointsPts
+    mvFraPointsPts = mpFeature->UndistoredPoints(); // mvCurPointsPts
 
-    mvFraPointsID = mpfeature->mvPointTrackID;
+    mvFraPointsID = mpFeature->mvPointTrackID;
 
     mvFraFeatures.clear();
     for (int i = 0; i < mvFraPointsPts.size(); i++)

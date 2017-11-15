@@ -16,6 +16,7 @@ namespace RAIN_VIO
 {
 
 class Feature;
+class Camera;
 
 class Frame
 {
@@ -32,7 +33,7 @@ public:
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
 
-    Frame(const string &strSettingsFile, const int nWindowSize);
+    Frame(Camera *pCamera, Feature *pfeature, const string &strSettingsFile, const int nWindowSize);
 
     ~Frame();
 
@@ -50,12 +51,14 @@ public:
 
 private:
 
+    Feature *mpFeature;
+    Camera *mpCamera;
+
     Eigen::Matrix3d mRcw;
     Eigen::Vector3d mtcw;
     Eigen::Matrix3d mRwc;
     Eigen::Vector3d mtwc;
 
-    Feature *mpfeature;
     double ImageHeight;
     double ImageWidth;
 

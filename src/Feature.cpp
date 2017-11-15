@@ -24,7 +24,7 @@ static void DeleteErrStatus(vector<T> &v, vector<uchar> status)
     v.resize(j);
 }
 
-Feature::Feature(const string &strSettingsFile, const int nWindowSize)
+Feature::Feature(Camera *pCamera, const string &strSettingsFile, const int nWindowSize)
 {
     mnWindowSize = nWindowSize;
 
@@ -33,43 +33,33 @@ Feature::Feature(const string &strSettingsFile, const int nWindowSize)
     mFirstImageTime = 0;
     mIDcnt = 0;
 
-    mpcamera = new Camera(strSettingsFile);
-
-    cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
-
-    if (!fsSettings.isOpened())
-    {
-        LOG(FATAL) << "Failed to open settings file at " << strSettingsFile << endl;
-        exit(-1);
-    }
+    mpCamera = pCamera;
 
     CmaeraK = cv::Mat::eye(3, 3, CV_32F);
-    CmaeraK.at<float>(0, 0) = fsSettings["Camera.fx"];
-    CmaeraK.at<float>(1, 1) = fsSettings["Camera.fy"];
-    CmaeraK.at<float>(0, 2) = fsSettings["Camera.cx"];
-    CmaeraK.at<float>(1, 2) = fsSettings["Camera.cy"];
+    CmaeraK.at<float>(0, 0) = (float)mpCamera->mfx;
+    CmaeraK.at<float>(1, 1) = (float)mpCamera->mfy;
+    CmaeraK.at<float>(0, 2) = (float)mpCamera->mcx;
+    CmaeraK.at<float>(1, 2) = (float)mpCamera->mcy;
 
     DistCoef = cv::Mat::zeros(4, 1, CV_32F);
-    DistCoef.at<float>(0) = fsSettings["Camera.k1"];
-    DistCoef.at<float>(1) = fsSettings["Camera.k2"];
-    DistCoef.at<float>(2) = fsSettings["Camera.p1"];
-    DistCoef.at<float>(3) = fsSettings["Camera.p2"];
+    DistCoef.at<float>(0) = (float)mpCamera->mk1;
+    DistCoef.at<float>(1) = (float)mpCamera->mk2;
+    DistCoef.at<float>(2) = (float)mpCamera->mp1;
+    DistCoef.at<float>(3) = (float)mpCamera->mp2;
 
-    ImageHeight = fsSettings["Camera.height"];
-    ImageWidth = fsSettings["Camera.width"];
+    ImageHeight = mpCamera->mImageHeight;
+    ImageWidth = mpCamera->mImageWidth;
 
-    ImageGridHeight = fsSettings["ImageGridHeight"];
-    ImageGridWidth = fsSettings["ImageGridWidth"];
+    ImageGridHeight = mpCamera->mImageGridHeight;
+    ImageGridWidth = mpCamera->mImageGridWidth;
 
-    mnumFeatures = fsSettings["ORBextractor.numFeatures"];
-    minDist = fsSettings["ORBextractor.minDist"];
-    mFeatureShow = fsSettings["Viewer.FeatureShow"];
-
+    mnumFeatures = mpCamera->mnumFeatures;
+    minDist = mpCamera->minDist;
+    mFeatureShow = mpCamera->mFeatureShow;
 }
 
 Feature::~Feature()
 {
-    delete(mpcamera);
 }
 
 bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
@@ -100,7 +90,8 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     if (mNextImage.empty())
     {
         mPreImage = mCurImage = mNextImage = image;
-    } else {
+    }
+    else {
         mNextImage = image;
     }
 
@@ -170,7 +161,7 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     mPreImage = mNextImage;
     mvPrePointsPts = mvNextPointsPts;
 
-    if (!mCurImageShow.empty() && mFeatureShow ==1 )
+    if (!mCurImageShow.empty() && mFeatureShow == 1)
     {
         for (int i = 0; i < int(mvCurPointsPts.size()); i++)
         {
@@ -187,7 +178,7 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
         cv::putText(mCurImageShow, to_string(timefeature.toc()), cv::Point(10,70), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
 
         cv::imshow("Feature Detection Window", mCurImageShow); // to_string(timestamp)
-        cv::waitKey(30);
+        cv::waitKey(20);
     }
 
     mCurImageShow = mNextImageShow;
@@ -270,7 +261,7 @@ void Feature::RejectWithF(void)
     vunPrePointsPts.resize(vunPrePointsPts.size());
 
 // OpenCV Fundamental matrix
-#if 0
+#if 1
     // Fill matrix with points
     if (vunPrePointsPts.size() > 8)
     {
@@ -319,12 +310,12 @@ void Feature::RejectWithF(void)
     {
         Eigen::Vector3d tmpP;
 
-        mpcamera->LiftProjective(Eigen::Vector2d(mvPrePointsPts[i].x, mvPrePointsPts[i].y), tmpP);
+        mpCamera->LiftProjective(Eigen::Vector2d(mvPrePointsPts[i].x, mvPrePointsPts[i].y), tmpP);
         tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
         tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
         vunPrePointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
 
-        mpcamera->LiftProjective(Eigen::Vector2d(mvNextPointsPts[i].x, mvNextPointsPts[i].y), tmpP);
+        mpCamera->LiftProjective(Eigen::Vector2d(mvNextPointsPts[i].x, mvNextPointsPts[i].y), tmpP);
         tmpP[0]  = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
         tmpP[1]  = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
         vunNextPointsPts[i] = cv::Point2f(tmpP[0], tmpP[1]);
@@ -429,7 +420,7 @@ vector<cv::Point2f> Feature::UndistoredPoints()
     {
         Eigen::Vector3d tmpP;
 
-        mpcamera->LiftProjective(Eigen::Vector2d(mvCurPointsPts[i].x, mvCurPointsPts[i].y), tmpP);
+        mpCamera->LiftProjective(Eigen::Vector2d(mvCurPointsPts[i].x, mvCurPointsPts[i].y), tmpP);
 //        tmpP[0] = FOCAL_LENGTH*tmpP[0]/tmpP[2] + ImageWidth/2.0;
 //        tmpP[1] = FOCAL_LENGTH*tmpP[1]/tmpP[2] + ImageHeight/2.0;
 
@@ -453,7 +444,7 @@ cv::Mat Feature::UndistoredImage(const cv::Mat image)
 
 #else
 
-    // use the mpcamera->LiftProjective();
+    // use the mpCamera->LiftProjective();
 
 #endif
     return Unimage;

@@ -396,7 +396,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
     for (int i = 0; i < FrameNum; i++) // Rcw
     {
         LOG(INFO) << "the camera pose in the SFM " << i << " frame" <<endl;
-        LOG(INFO) << "Euler: " <<Converter::toEuler(Eigen::Quaterniond(Rcw[i])).transpose() << " t:"  << tcw[i].transpose() << endl;
+        LOG(INFO) << "Euler:" <<Converter::toEuler(Eigen::Quaterniond(Rcw[i])).transpose() << " t:"  << tcw[i].transpose() << endl;
     }
 
     ceres::Problem problem;
