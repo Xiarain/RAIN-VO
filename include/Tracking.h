@@ -55,8 +55,7 @@ public:
     Initializer *mpInitializer;
     Feature *mpFeature;
 
-    map<size_t, Frame> mmpFrames;
-    map<size_t, Frame *> mmpFramesWin;
+    map<size_t, Frame *> mmpFrames;
 
     eTrackingState etrackingState;
     eMarginFlag eMarginflag;
@@ -101,6 +100,7 @@ private:
     uint mIDcnt;
     string mstrSettingsFile;
     array<Frame *, (gWindowSize+1)> maFramesWin;
+    Frame *mpCurrentFrame;
 
 }; // class Tracking
 

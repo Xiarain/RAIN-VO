@@ -5,7 +5,6 @@
 #ifndef RAIN_VIO_FRAME_H
 #define RAIN_VIO_FRAME_H
 
-#include "Tracking.h"
 #include "Feature.h"
 #include <iostream>
 #include <vector>
@@ -33,6 +32,7 @@ public:
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
 
+    Frame();
     Frame(Camera *pCamera, Feature *pfeature, const string &strSettingsFile, const int nWindowSize);
 
     ~Frame();
@@ -61,7 +61,9 @@ public:
 
 private:
 
-    static size_t mID;
+    static size_t gCount;
+
+    size_t mID;
 
     Feature *mpFeature;
     Camera *mpCamera;

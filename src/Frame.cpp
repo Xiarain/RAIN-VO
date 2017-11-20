@@ -7,11 +7,17 @@
 namespace RAIN_VIO
 {
 
-size_t Frame::mID = 0;
+size_t Frame::gCount = 0;
+
+
+Frame::Frame()
+{}
 
 Frame::Frame(Camera *pCamera, Feature *pFeature, const string &strSettingsFile, const int nWindowSize)
 {
-    mID++;
+    gCount++;
+
+    mID = gCount;
 
     mnWindowSize = nWindowSize;
 

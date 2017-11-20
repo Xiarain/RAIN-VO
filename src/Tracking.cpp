@@ -78,17 +78,17 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
     vector<pair<int, Eigen::Vector3d>> Features;
 
-    Frame CurrentFrame(mpCamera, mpFeature, mstrSettingsFile, mnWindowSize);
+    mpCurrentFrame = new Frame(mpCamera, mpFeature, mstrSettingsFile, mnWindowSize);
 
-    CurrentFrame.DetectKeyPoint(image, TimeStamps);
+    mpCurrentFrame->DetectKeyPoint(image, TimeStamps);
 
     // the list of the map point
-    mmpFrames.insert(make_pair(CurrentFrame.GetFrameID(), CurrentFrame));
+    mmpFrames.insert(make_pair(mpCurrentFrame->GetFrameID(), mpCurrentFrame));
 
-    maFramesWin.at(mdFrameCount) = &CurrentFrame;
+    maFramesWin.at(mdFrameCount) = mpCurrentFrame;
 
     // whether keyframe or not
-    if (mpMap->AddFeatureCheckParallax(mdFrameCount, CurrentFrame.mvFraFeatures))
+    if (mpMap->AddFeatureCheckParallax(mdFrameCount, mpCurrentFrame->mvFraFeatures))
     {
         // this is a keyframe
         eMarginflag = MARGINOLD;

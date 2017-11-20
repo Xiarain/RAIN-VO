@@ -12,6 +12,7 @@
 #include <ceres/rotation.h>
 #include "Converter.h"
 #include "Parameters.h"
+#include "Map.h"
 
 namespace RAIN_VIO
 {
