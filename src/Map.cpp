@@ -16,8 +16,6 @@ int MapPoint::EndFrame()
 Map::Map(int nWindowSize)
 {
     mlMapPoints.clear();
-
-    mnWindowSize = nWindowSize;
 }
 /**
  * @brief check the parallax of the frame to label the frame is the keyframe or not
@@ -57,7 +55,7 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
         }
     } // for (auto Feature : Features)
 
-
+    // TODO add the feature point to the Map and the compute the parallax should be separated, and whether the frame is the keyframe should add some other requirments
     if (FrameCount < 2 || mLastTrackNum < 20)
         return true;
 
@@ -198,13 +196,83 @@ void Map::RemoveFront(int FrameCount)
 
 void Map::DebugShow()
 {
-    cout << "the map debug: show the map point in the map" << endl;
-    cout << "the size of the map points" << static_cast<int>(mlMapPoints.size()) << endl;
-
-    cout << "the ID: the number of the used: the start frame" << endl;
+    LOG(INFO) << "the map debug: show the map point in the map" << endl;
+    LOG(INFO) << "the size of the map points " << static_cast<int>(mlMapPoints.size()) << endl;
+    LOG(INFO) << "the ID: the number of the used: the start frame" << endl;
     for (auto point : mlMapPoints)
     {
-        cout <<  point.mnFeatureID << " " << static_cast<int>(point.mvFeaturePerFrame.size()) << " " << point.mnStartFrame << endl;
+        LOG(INFO) <<  point.mnFeatureID << " " << static_cast<int>(point.mvFeaturePerFrame.size()) << " " << point.mnStartFrame << endl;
+    }
+}
+
+/**
+ * triangulate and estimated the depth in the all keyframe slide window
+ * @param paFramesWin
+ */
+void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
+{
+    // TODO mnWindowSize should be a global variable
+    for (auto &MapPoint : mlMapPoints)
+    {
+        MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
+
+        if (!MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < mnWindowSize-2)
+            continue;
+
+        if (MapPoint.mdEstimatedDepth > 0)
+            continue;
+
+        int Frame0num = MapPoint.mnStartFrame;
+        int Frame1num = Frame0num - 1;
+
+        Eigen::MatrixXd SVDA(2*MapPoint.mvFeaturePerFrame.size(), 4);
+
+        Eigen::Matrix3d Rc0w = paFramesWin->at((size_t)Frame0num)->GetRotation();
+        Eigen::Vector3d tc0w = paFramesWin->at((size_t)Frame0num)->GetTranslation();
+
+        LOG_IF(WARNING, tc0w[0] == 0 & tc0w[1] == 0 & tc0w[2] == 0) << "the Pose0 of the camera is wrong" << endl;
+
+        int SVDIdx = 0;
+
+        // the observation 2D feature point of the MapPoint in per frame
+        for (auto &itFeaturePerFrame : MapPoint.mvFeaturePerFrame)
+        {
+            Frame1num++;
+
+            Eigen::Matrix3d Rc1w = paFramesWin->at((size_t)Frame1num)->GetRotation();
+            Eigen::Vector3d tc1w = paFramesWin->at((size_t)Frame1num)->GetTranslation();
+
+            LOG_IF(WARNING, tc1w[0] == 0 & tc1w[1] == 0 & tc1w[2] == 0) << "the Pose1 of the camera is wrong"<< endl;
+
+            Eigen::Matrix3d Rc1c0 = Rc0w.transpose()*Rc1w;
+            Eigen::Vector3d tc1c0 = Rc0w.transpose()*(tc1w - tc0w);
+
+            Eigen::Matrix<double, 3, 4> Tc1c0;
+            Tc1c0.block<3, 3>(0, 0) = Rc1c0;
+            Tc1c0.block<3, 1>(0, 3) = tc1c0;
+
+            Eigen::Vector3d Point2d = itFeaturePerFrame.Point.normalized();
+            SVDA.row(SVDIdx++) = Point2d[0]*Tc1c0.row(2) - Point2d[2]*Tc1c0.row(0);
+            SVDA.row(SVDIdx++) = Point2d[1]*Tc1c0.row(2) - Point2d[2]*Tc1c0.row(1);
+
+            // TODO: think over
+            if (Frame1num == Frame0num)
+                continue;
+        }
+
+        CHECK(SVDIdx == SVDA.rows()) << "the the svd matrix construction wrong";
+
+        Eigen::Vector4d SVDV = Eigen::JacobiSVD<Eigen::MatrixXd>(SVDA, Eigen::ComputeThinV).matrixV().rightCols<1>();
+
+        MapPoint.mdEstimatedDepth = SVDV[2]/SVDV[3];
+
+        LOG_IF(INFO, MapPoint.mdEstimatedDepth < 0.1) << "the estimated depth of the MapPoint is too small " << MapPoint.mdEstimatedDepth << endl;
+        LOG_IF(INFO, MapPoint.mdEstimatedDepth > 10) << "the estimated depth of the MapPoint is too big " << MapPoint.mdEstimatedDepth << endl;
+
+        if (MapPoint.mdEstimatedDepth < 0.1)
+        {
+            MapPoint.mdEstimatedDepth = 5.0;
+        }
     }
 }
 

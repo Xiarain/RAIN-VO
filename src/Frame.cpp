@@ -7,8 +7,12 @@
 namespace RAIN_VIO
 {
 
+size_t Frame::mID = 0;
+
 Frame::Frame(Camera *pCamera, Feature *pFeature, const string &strSettingsFile, const int nWindowSize)
 {
+    mID++;
+
     mnWindowSize = nWindowSize;
 
     mpFeature = pFeature;
@@ -111,5 +115,27 @@ void Frame::UpdatePoseMatrices()
     mTwc.block<3, 1>(0, 3) = mtwc;
 }
 
+void Frame::SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc)
+{
+    mRqwc = Rqwc;
+    mtwc = twc;
+    mRwc = mRqwc.toRotationMatrix();
+
+    mRcw = mRwc.inverse();
+    mtcw = -mRwc.inverse()*mtwc;
+
+    mTcw.block<3, 3>(0, 0) = mRcw;
+    mTcw.block<3, 1>(0, 3) = mtcw;
+}
+
+Eigen::Matrix3d Frame::GetRotation()
+{
+    return mRcw;
+}
+
+Eigen::Vector3d Frame::GetTranslation()
+{
+    return mtcw;
+}
 
 } // namespace RAIN_VIO

@@ -294,10 +294,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
 {
     mnFeatureNum = (int)vSFMFeature.size();
 
-    Rqwc[l].w() = 1;
-    Rqwc[l].x() = 0;
-    Rqwc[l].y() = 0;
-    Rqwc[l].z() = 0;
+    Rqwc[l].setIdentity();
     twc[l].setZero();
 
     // the coordination of the newest frame
@@ -368,7 +365,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
         TriangulateTwoFrames(i, Tcw[i], l, Tcw[l], vSFMFeature);
     }
 
-    for (int i = 0; i < mnFeatureNum; i++)
+    for (size_t i = 0; i < mnFeatureNum; i++)
     {
         if (vSFMFeature[i].State)
             continue;
@@ -433,12 +430,12 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
     }
 
     // the 3D feature point parameter
-    for (int i = 0; i < mnFeatureNum; i++)
+    for (size_t i = 0; i < mnFeatureNum; i++)
     {
-        if (!vSFMFeature[i].State)
+        if (!vSFMFeature.at(i).State)
             continue;
 
-        for (int j = 0; j < int(vSFMFeature[i].Observation.size()); j++)
+        for (int j = 0; j < int(vSFMFeature.at(i).Observation.size()); j++)
         {
             int idxcamera = vSFMFeature[i].Observation[j].first;
 
@@ -449,14 +446,14 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
             Point3dw[i][1] = vSFMFeature[i].Position[1];
             Point3dw[i][2] = vSFMFeature[i].Position[2];
 
-            problem.AddResidualBlock(costFunction, NULL, Rdcw[idxcamera], tdcw[idxcamera], Point3dw[i]);
+            problem.AddResidualBlock(costFunction, nullptr, Rdcw[idxcamera], tdcw[idxcamera], Point3dw[i]);
         }
     }
 
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.minimizer_progress_to_stdout = true; // display the every iteration step
-    options.max_solver_time_in_seconds = 0.35;
+    options.minimizer_progress_to_stdout = false; // display the every iteration step
+    options.max_solver_time_in_seconds = 0.30;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
@@ -465,7 +462,6 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
     if (summary.termination_type == ceres::CONVERGENCE || (summary.final_cost > 0  && summary.final_cost < 5e-03) )
     {
         LOG(INFO) << "the BA of SFM converge" << endl;
-        return true;
     }
     else
     {
@@ -486,7 +482,7 @@ bool  GlobalSFM::Construct(int FrameNum, Eigen::Quaterniond *Rqwc, Eigen::Vector
 
     for (int i = 0; i < FrameNum; i++)
     {
-        twc[i] = -1*Rqwc[i]*Eigen::Vector3d(tdcw[i][0], tdcw[i][1], tdcw[i][2]);
+        twc[i] = -Rqwc[i].toRotationMatrix()*Eigen::Vector3d(tdcw[i][0], tdcw[i][1], tdcw[i][2]);
     }
 
     for (size_t i = 0; i < vSFMFeature.size(); i++)

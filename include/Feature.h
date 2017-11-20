@@ -40,7 +40,7 @@ public:
     Camera *mpCamera;
 
     enum eTrackingState {
-        NO_INITIALIZED = 0,
+        NOINITIALIZED = 0,
         OK = 1,
         LOST = 2,
         BAD = 3

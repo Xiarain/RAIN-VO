@@ -4,8 +4,6 @@
 
 #include "System.h"
 
-
-
 #include <opencv2/opencv.hpp>
 
 
@@ -16,8 +14,7 @@ namespace RAIN_VIO
 
 System::System(const string &strSettingsFile, const bool bOpenViwer)
 {
-    mnWindowSize = 10;
-    mpTracker = new Tracking(strSettingsFile, mnWindowSize);
+    mpTracker = new Tracking(strSettingsFile);
     mpViewer = new Viewer(strSettingsFile);
 
 }

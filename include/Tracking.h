@@ -11,11 +11,13 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
 
+#include "System.h"
 #include "Camera.h"
 #include "Frame.h"
 #include "Feature.h"
 #include "Map.h"
 #include "Initializer.h"
+#include "Parameters.h"
 
 using namespace std;
 
@@ -31,7 +33,7 @@ class Initializer;
 
 enum eTrackingState
 {
-    NO_INITIALIZED = 0,
+    NOINITIALIZED = 0,
     OK = 1,
     LOST = 2,
     BAD = 3
@@ -53,7 +55,7 @@ public:
     Initializer *mpInitializer;
     Feature *mpFeature;
 
-    map<size_t, Frame *> mmpFrames;
+    map<size_t, Frame> mmpFrames;
     map<size_t, Frame *> mmpFramesWin;
 
     eTrackingState etrackingState;
@@ -76,14 +78,19 @@ public:
 
     size_t mdFrameCount;
 
-    int mnWindowSize;
+    static const int mnWindowSize = 10;
 
-    Tracking(const string &strSettingsFile, int nWindowSize);
+    Tracking(const string &strSettingsFile);
     Tracking();
     ~Tracking();
+
     void Track(const cv::Mat &image, const double &TimeStamps);
+
     void SlideWindow();
+
     bool InitialStructure();
+
+    bool TrackReferenceKeyFrame();
 
 private:
 
@@ -93,7 +100,7 @@ private:
     int minDist;
     uint mIDcnt;
     string mstrSettingsFile;
-
+    array<Frame *, (gWindowSize+1)> maFramesWin;
 
 }; // class Tracking
 

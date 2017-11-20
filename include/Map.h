@@ -9,12 +9,18 @@
 #include <vector>
 #include <list>
 #include <eigen3/Eigen/Dense>
+#include <glog/logging.h>
+
+#include "Frame.h"
+#include "Tracking.h"
+#include "Parameters.h"
 
 using namespace std;
 
 namespace RAIN_VIO
 {
 
+class Frame;
 // 2D feature point in the per frame
 class FeaturePerFrame
 {
@@ -45,7 +51,7 @@ public:
     double mdEstimatedDepth;
     int mnFlag;
 
-    Eigen::Vector3d mdGtp;
+    Eigen::Vector3d mdPoint3d;
 
     MapPoint(int _FeatureID, int _StartFrame)
             : mnFeatureID(_FeatureID), mnStartFrame(_StartFrame),
@@ -63,7 +69,7 @@ class Map
 {
 public:
 
-    int mnWindowSize;
+    static const int mnWindowSize=10;
 
     Map(int nWindowSize);
     int mLastTrackNum;
@@ -75,6 +81,7 @@ public:
     void RemoveBack();
     void RemoveFront(int FrameCount);
     void DebugShow();
+    void Triangulate(array<Frame *, mnWindowSize+1> *paFramesWin);
 
 }; // class Map
 

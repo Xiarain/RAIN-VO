@@ -21,7 +21,7 @@ void ReadParameter();
 int main(int argc,char* argv[])
 {
     google::InitGoogleLogging(argv[0]);
-//    google::SetStderrLogging(google::INFO);
+    google::SetStderrLogging(google::WARNING);
     FLAGS_colorlogtostderr = true;
     FLAGS_log_dir = "../log";
     LOG(INFO) << "RAIN VO monocular vision odometry";

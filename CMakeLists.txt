@@ -49,7 +49,7 @@ add_executable(VIO
     src/BenchMark.cpp
     src/Converter.cpp
     src/Viewer.cpp
-)
+        src/Optimizer.cpp include/Optimizer.h src/Parameters.cpp include/Parameters.h)
 
 target_link_libraries(VIO
     ${OpenCV_LIBRARIES}

@@ -10,10 +10,7 @@
 namespace RAIN_VIO
 {
 
-Tracking::Tracking()
-{
-}
-Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
+Tracking::Tracking(const string &strSettingsFile)
 {
     mstrSettingsFile = strSettingsFile;
 
@@ -22,8 +19,7 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
     mFirstImageTime = 0;
     mIDcnt = 0;
     mdFrameCount = 0;
-    etrackingState = NO_INITIALIZED;
-    mnWindowSize = nWindowSize;
+    etrackingState = NOINITIALIZED;
 
     mmpFrames.clear();
 
@@ -68,8 +64,8 @@ Tracking::Tracking(const string &strSettingsFile, int nWindowSize)
     LOG(INFO) << "- Image height: " << ImageHeight << endl;
     LOG(INFO) << "- Image width: " << ImageWidth << endl;
 
-    mpMap = new Map(nWindowSize);
-    mpInitializer = new Initializer(CmaeraK, mpMap, nWindowSize);
+    mpMap = new Map(mnWindowSize);
+    mpInitializer = new Initializer(CmaeraK, mpMap, mnWindowSize);
     mpCamera = new Camera(strSettingsFile);
     mpFeature = new Feature(mpCamera, strSettingsFile, mnWindowSize);
 }
@@ -87,7 +83,9 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     CurrentFrame.DetectKeyPoint(image, TimeStamps);
 
     // the list of the map point
-    mmpFrames.insert(make_pair(mdFrameCount, &CurrentFrame));
+    mmpFrames.insert(make_pair(CurrentFrame.GetFrameID(), CurrentFrame));
+
+    maFramesWin.at(mdFrameCount) = &CurrentFrame;
 
     // whether keyframe or not
     if (mpMap->AddFeatureCheckParallax(mdFrameCount, CurrentFrame.mvFraFeatures))
@@ -98,13 +96,14 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
         eMarginflag = MARGINSECONDNEW;
 
-    if (etrackingState == NO_INITIALIZED)
+    if (etrackingState == NOINITIALIZED)
     {
         if (mdFrameCount == mnWindowSize)
         {
             if (InitialStructure())
             {
                 etrackingState = OK;
+                SlideWindow();
             }
             else
             {
@@ -116,6 +115,8 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     }
     else
     {
+        mpMap->Triangulate(&maFramesWin);
+
         SlideWindow();
     }
 }
@@ -126,15 +127,31 @@ void Tracking::SlideWindow()
     {
         if (mdFrameCount == mnWindowSize)
         {
-            mpMap->RemoveBack();
+            // move the number 0 array to the number N array
+            for (int i = 0; i < mnWindowSize; i++)
+            {
+                swap(maFramesWin.at(i), maFramesWin.at(i+1));
+            }
 
-//            mmpFrames.erase(mmpFrames.begin(), );
+            maFramesWin.at(mnWindowSize) = maFramesWin.at(mnWindowSize-1);
+
+//            size_t Frame0ID = maFramesWin.at(0)->GetFrameID();
+//
+//            map<size_t, Frame>::iterator it0;
+//
+//            it0 = mmpFrames.find(Frame0ID);
+
+//            mmpFrames.erase(mmpFrames.begin(), it0);
+
+            mpMap->RemoveBack();
         }
     }
     else
     {
-        if (mdFrameCount == mnWindowSize) // remove the frame N
+        if (mdFrameCount == mnWindowSize) // remove the frame N-1
         {
+            swap(maFramesWin.at(mnWindowSize-1), maFramesWin.at(mnWindowSize));
+
             mpMap->RemoveFront(mdFrameCount);
         }
     }
@@ -176,7 +193,6 @@ bool Tracking::InitialStructure()
     // RelativeR Rij, i == l == 0
     if (!mpInitializer->RelativePose(RelativeR, RelativeT, l))
     {
-        LOG(WARNING) << "there is not enough parallax between the two frames" << endl;
         return false;
     }
 
@@ -189,10 +205,18 @@ bool Tracking::InitialStructure()
         return false;
     }
 
-    for (int i = 0; i < mdFrameCount; i++)
+    // the set the pose of the keyframes in the slide window
+    for (int i = 0; i < mdFrameCount+1; i++)
     {
-
+        maFramesWin.at(i)->SetPose(Rqwc[i], twc[i]);
     }
+
+    // TODO there are some keyframes needed to solve the position
+}
+
+bool Tracking::TrackReferenceKeyFrame()
+{
+
 }
 
 } // namespace RAIN_VIO

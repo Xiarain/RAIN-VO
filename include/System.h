@@ -37,8 +37,6 @@ private:
 
 public:
 
-    int mnWindowSize;
-
     System(const string &strSettingsFile, const bool bOpenViwer);
 
     void TrackMono(const string &strSettingsFile, const cv::Mat &image, const double &TimeStamps);
