@@ -3,7 +3,6 @@
 //
 
 #include "Tracking.h"
-
 #include "TicToc.h"
 
 
@@ -18,7 +17,7 @@ Tracking::Tracking(const string &strSettingsFile)
     mbFirstImage = true;
     mFirstImageTime = 0;
     mIDcnt = 0;
-    mdFrameCount = 0;
+    mnFrameCount = 0;
     etrackingState = NOINITIALIZED;
 
     mmpFrames.clear();
@@ -85,10 +84,10 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     // the list of the map point
     mmpFrames.insert(make_pair(mpCurrentFrame->GetFrameID(), mpCurrentFrame));
 
-    maFramesWin.at(mdFrameCount) = mpCurrentFrame;
+    maFramesWin.at(mnFrameCount) = mpCurrentFrame;
 
     // whether keyframe or not
-    if (mpMap->AddFeatureCheckParallax(mdFrameCount, mpCurrentFrame->mvFraFeatures))
+    if (mpMap->AddFeatureCheckParallax(mnFrameCount, mpCurrentFrame->mvFraFeatures))
     {
         // this is a keyframe
         eMarginflag = MARGINOLD;
@@ -98,24 +97,23 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 
     if (etrackingState == NOINITIALIZED)
     {
-        if (mdFrameCount == mnWindowSize)
+        if (mnFrameCount == mnWindowSize)
         {
             if (InitialStructure())
             {
                 etrackingState = OK;
-                SlideWindow();
             }
-            else
-            {
-                SlideWindow();
-            }
+
+            SlideWindow();
         }
         else
-            mdFrameCount++;
+            mnFrameCount++;
     }
     else
     {
-        mpMap->Triangulate(&maFramesWin);
+//        mpMap->Triangulate(&maFramesWin);
+
+        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
 
         SlideWindow();
     }
@@ -125,7 +123,7 @@ void Tracking::SlideWindow()
 {
     if (eMarginflag == MARGINOLD) // remove the frame 0
     {
-        if (mdFrameCount == mnWindowSize)
+        if (mnFrameCount == mnWindowSize)
         {
             // move the number 0 array to the number N array
             for (int i = 0; i < mnWindowSize; i++)
@@ -148,11 +146,11 @@ void Tracking::SlideWindow()
     }
     else
     {
-        if (mdFrameCount == mnWindowSize) // remove the frame N-1
+        if (mnFrameCount == mnWindowSize) // remove the frame N-1
         {
             swap(maFramesWin.at(mnWindowSize-1), maFramesWin.at(mnWindowSize));
 
-            mpMap->RemoveFront(mdFrameCount);
+            mpMap->RemoveFront(mnFrameCount);
         }
     }
 }
@@ -164,9 +162,9 @@ bool Tracking::InitialStructure()
     Eigen::Vector3d RelativeT;
     int l = 0;
 
-    Eigen::Quaterniond Rqwc[mdFrameCount+1];
-    Eigen::Vector3d twc[mdFrameCount+1];
-    map<int, Eigen::Vector3d> SFMPoint3d;
+    Eigen::Quaterniond Rqwc[mnFrameCount+1];
+    Eigen::Vector3d twc[mnFrameCount+1];
+    map<int, Eigen::Vector3d> mSFMPoint3d;
 
     vector<SFMFeature> vSFMFeature;
 
@@ -198,7 +196,7 @@ bool Tracking::InitialStructure()
 
     GlobalSFM GSFM;
 
-    if (!GSFM.Construct(mdFrameCount+1, Rqwc, twc, l, RelativeR, RelativeT, vSFMFeature, SFMPoint3d))
+    if (!GSFM.Construct(mnFrameCount+1, Rqwc, twc, l, RelativeR, RelativeT, vSFMFeature, mSFMPoint3d))
     {
         LOG(ERROR) << "global SFM failed " << endl;
         eMarginflag = MARGINOLD;
@@ -206,9 +204,25 @@ bool Tracking::InitialStructure()
     }
 
     // the set the pose of the keyframes in the slide window
-    for (int i = 0; i < mdFrameCount+1; i++)
+    for (int i = 0; i < mnFrameCount+1; i++)
     {
         maFramesWin.at(i)->SetPose(Rqwc[i], twc[i]);
+    }
+
+    for (auto &MapPoint : mpMap->mlMapPoints)
+    {
+        auto it = mSFMPoint3d.find(MapPoint.mnFeatureID);
+
+        if (it == mSFMPoint3d.end())
+        {
+            continue;
+
+        } else{
+
+            MapPoint.mPoint3d = it->second;
+            MapPoint.mdEstimatedDepth = it->second[2];
+            // cout << MapPoint.mnFeatureID << " " << MapPoint.mPoint3d.transpose() << endl;
+        }
     }
 
     // TODO there are some keyframes needed to solve the position

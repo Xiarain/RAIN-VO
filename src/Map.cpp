@@ -32,13 +32,14 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
     for (auto Feature : Features)
     {
         FeaturePerFrame featurePerFrame(Feature.second); // the feature's position in the image
-        uint featureID = Feature.first; // the ID
+        uint featureID = Feature.first; // the ID comes from the feature point detection
 
         auto it = find_if(mlMapPoints.begin(), mlMapPoints.end(), [featureID](const MapPoint &it)
                     {
                         return it.mnFeatureID == featureID;
                     });
 
+        // this MapPoint is not in the list and add the MapPoint to the list
         if (it == mlMapPoints.end())
         {
             // FrameCount is the start frame of this mappoint
@@ -260,7 +261,7 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
                 continue;
         }
 
-        CHECK(SVDIdx == SVDA.rows()) << "the the svd matrix construction wrong";
+        CHECK(SVDIdx == SVDA.rows()) << "the svd matrix construction wrong";
 
         Eigen::Vector4d SVDV = Eigen::JacobiSVD<Eigen::MatrixXd>(SVDA, Eigen::ComputeThinV).matrixV().rightCols<1>();
 
@@ -273,7 +274,9 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
         {
             MapPoint.mdEstimatedDepth = 5.0;
         }
-    }
+
+        MapPoint.mPoint3d = MapPoint.mdEstimatedDepth*MapPoint.mvFeaturePerFrame[Frame0num].Point;
+    } // for (auto &MapPoint : mlMapPoints)
 }
 
 }// namesapce RAIN_VIO

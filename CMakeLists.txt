@@ -31,13 +31,8 @@ include_directories(
     BEFORE ${GLOG_INCLUDE_DIRS}
 )
 
-# 添加源文件
-#add_library(${PROJECT_NAME} SHARED
-#    src/Frame.cpp
-#    src/System.cpp)
-
-add_executable(VIO
-    src/main.cpp
+# add source file
+add_library(${PROJECT_NAME} SHARED
     src/Frame.cpp
     src/System.cpp
     src/KeyFrame.cpp
@@ -49,13 +44,26 @@ add_executable(VIO
     src/BenchMark.cpp
     src/Converter.cpp
     src/Viewer.cpp
-        src/Optimizer.cpp include/Optimizer.h src/Parameters.cpp include/Parameters.h)
+    src/Optimizer.cpp
+    src/Parameters.cpp)
 
-target_link_libraries(VIO
+target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
     ${CERES_LIBRARIES}
     ${Pangolin_LIBRARIES}
 )
+
+add_executable(mono_euroc
+    Example/mono_euroc.cpp
+)
+
+target_link_libraries(mono_euroc
+    ${PROJECT_NAME}
+)
+
+
+add_executable(test_glog test/test_glog.cpp.cpp)
+target_link_libraries(test_glog ${PROJECT_NAME})
 
 
 

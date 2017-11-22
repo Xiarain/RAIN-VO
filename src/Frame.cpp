@@ -10,9 +10,6 @@ namespace RAIN_VIO
 size_t Frame::gCount = 0;
 
 
-Frame::Frame()
-{}
-
 Frame::Frame(Camera *pCamera, Feature *pFeature, const string &strSettingsFile, const int nWindowSize)
 {
     gCount++;
@@ -136,12 +133,12 @@ void Frame::SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc)
 
 Eigen::Matrix3d Frame::GetRotation()
 {
-    return mRcw;
+    return mRwc;
 }
 
 Eigen::Vector3d Frame::GetTranslation()
 {
-    return mtcw;
+    return mtwc;
 }
 
 } // namespace RAIN_VIO

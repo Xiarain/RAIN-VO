@@ -18,6 +18,7 @@ namespace RAIN_VIO
 {
 
 class Frame;
+class Map;
 
 struct ReprojectionError2{
 
@@ -53,7 +54,8 @@ struct ReprojectionError2{
 
     double observedx;
     double observedy;
-};
+
+}; // struct ReprojectionError2
 
 class Optimizer
 {
@@ -61,7 +63,13 @@ class Optimizer
 public:
     void static PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap);
 
-};
+    Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
+
+    std::vector<double> GetReprojectionErrorNorms(const ceres::Problem& problem);
+
+    void RemoveOutliers(ceres::Problem& problem, double threshold);
+
+}; // class Optimizer
 
 }
 #endif //RAIN_VIO_OPTIMIZER_H

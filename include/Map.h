@@ -51,13 +51,12 @@ public:
     double mdEstimatedDepth;
     int mnFlag;
 
-    Eigen::Vector3d mdPoint3d;
+    Eigen::Vector3d mPoint3d;
 
     MapPoint(int _FeatureID, int _StartFrame)
             : mnFeatureID(_FeatureID), mnStartFrame(_StartFrame),
               mnUsedNum(0), mdEstimatedDepth(-1.0), mnFlag(0)
     {
-
     }
 
     int EndFrame();
@@ -71,16 +70,23 @@ public:
 
     static const int mnWindowSize=10;
 
-    Map(int nWindowSize);
     int mLastTrackNum;
     list<MapPoint> mlMapPoints;
 
+    Map(int nWindowSize);
+
     bool AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
+
     double ComputeParallax(const MapPoint &mapPoint, int FrameCount);
+
     vector<pair<Eigen::Vector3d, Eigen::Vector3d>> GetCorresponding(int FrameCount1, int FrameCount2);
+
     void RemoveBack();
+
     void RemoveFront(int FrameCount);
+
     void DebugShow();
+
     void Triangulate(array<Frame *, mnWindowSize+1> *paFramesWin);
 
 }; // class Map

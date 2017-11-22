@@ -18,6 +18,7 @@
 #include "Map.h"
 #include "Initializer.h"
 #include "Parameters.h"
+#include "Optimizer.h"
 
 using namespace std;
 
@@ -75,7 +76,7 @@ public:
     double ImageGridHeight;
     double ImageGridWidth;
 
-    size_t mdFrameCount;
+    size_t mnFrameCount;
 
     static const int mnWindowSize = 10;
 

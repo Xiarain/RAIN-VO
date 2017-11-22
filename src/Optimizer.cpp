@@ -7,6 +7,48 @@
 namespace RAIN_VIO
 {
 
+Eigen::Vector2d Optimizer::ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id)
+{
+    auto cost = problem.GetCostFunctionForResidualBlock(id);
+
+    std::vector<double*> parameterBlocks;
+    problem.GetParameterBlocksForResidualBlock(id, &parameterBlocks);
+
+    Eigen::Vector2d residual;
+    cost->Evaluate(parameterBlocks.data(), residual.data(), nullptr);
+
+    return residual;
+}
+
+std::vector<double> Optimizer::GetReprojectionErrorNorms(const ceres::Problem& problem)
+{
+    std::vector<double> result;
+    std::vector<ceres::ResidualBlockId> ids;
+
+    problem.GetResidualBlocks(&ids);
+
+    for (auto& id : ids)
+    {
+        result.push_back(ReprojectionError(problem, id).norm());
+    }
+
+    return result;
+}
+
+void Optimizer::RemoveOutliers(ceres::Problem& problem, double threshold)
+{
+    std::vector<ceres::ResidualBlockId> ids;
+    problem.GetResidualBlocks(&ids);
+
+    for (auto & id: ids)
+    {
+        if (ReprojectionError(problem, id).norm() > threshold)
+        {
+            problem.RemoveResidualBlock(id);
+        }
+    }
+}
+
 void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
 {
     ceres::Problem problem;
@@ -33,15 +75,15 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
         if (!(MapPoint.mdEstimatedDepth > 0))
             continue;
 
-        if (!(MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame < IdxWin))
+        if ((MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame < IdxWin && MapPoint.EndFrame() > IdxWin))
         {
-            FeaturePerFrame featurePerFrame = MapPoint.mvFeaturePerFrame.at((size_t)(IdxWin - MapPoint.mnStartFrame));
+            FeaturePerFrame featurePerFrame = MapPoint.mvFeaturePerFrame.at((size_t)(IdxWin-MapPoint.mnStartFrame));
 
             ceres::CostFunction* costFunction = ReprojectionError2::Create(featurePerFrame.Point[0], featurePerFrame.Point[1]);
 
-            Point3dw[0] = MapPoint.mvFeaturePerFrame.at((size_t)MapPoint.mnStartFrame).Point[0];
-            Point3dw[1] = MapPoint.mvFeaturePerFrame.at((size_t)MapPoint.mnStartFrame).Point[1];
-            Point3dw[2] = MapPoint.mvFeaturePerFrame.at((size_t)MapPoint.mnStartFrame).Point[2];
+            Point3dw[0] = MapPoint.mPoint3d[0];
+            Point3dw[1] = MapPoint.mPoint3d[1];
+            Point3dw[2] = MapPoint.mPoint3d[2];
 
             problem.AddResidualBlock(costFunction, nullptr, Rdcw, tdcw, Point3dw);
         }
@@ -54,6 +96,7 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
+    LOG(INFO) << "the " << IdxWin  << " frame" <<  endl;
     LOG(INFO) << summary.BriefReport() << endl;
 }
 
