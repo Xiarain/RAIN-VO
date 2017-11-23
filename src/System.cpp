@@ -17,6 +17,8 @@ System::System(const string &strSettingsFile, const bool bOpenViwer)
     mpTracker = new Tracking(strSettingsFile);
     mpViewer = new Viewer(strSettingsFile);
 
+    mptViewer = new thread(&Viewer::Run, mpViewer);
+
 }
 
 /**
@@ -29,7 +31,7 @@ void System::TrackMono(const string &strSettingsFile, const cv::Mat &image, cons
 //    cv::imshow("Raw image", image);
 //    cv::waitKey(5);
     mpTracker->Track(image, TimeStamps);
-//    mpViewer->Run();
+
 }
 
 

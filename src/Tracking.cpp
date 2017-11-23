@@ -113,8 +113,8 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     {
 //        mpMap->Triangulate(&maFramesWin);
 
-        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
-
+//        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
+//
         SlideWindow();
     }
 }

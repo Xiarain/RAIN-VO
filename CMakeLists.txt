@@ -61,9 +61,8 @@ target_link_libraries(mono_euroc
     ${PROJECT_NAME}
 )
 
-
-add_executable(test_glog test/test_glog.cpp.cpp)
+add_executable(test_glog test/test_glog.cpp )
 target_link_libraries(test_glog ${PROJECT_NAME})
 
-
-
+add_executable(test_pangolin test/test_pangolin.cpp)
+target_link_libraries(test_pangolin ${PROJECT_NAME})
