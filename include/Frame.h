@@ -31,6 +31,7 @@ public:
     vector<cv::Point2f> mvFraPointsPts;
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
+    cv::Mat mViwerShow;
 
     Frame();
     Frame(Camera *pCamera, Feature *pfeature, const string &strSettingsFile, const int nWindowSize);

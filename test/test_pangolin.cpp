@@ -35,25 +35,23 @@ int main()
             .SetBounds(0.0, 1.0, 0.2, 1.0, -1024.0f/768.0f)
             .SetHandler(new pangolin::Handler3D(s_cam));
 
-    cv::Mat rgb;
+    cv::Mat image;
 
-    rgb = cv::imread("/home/rain/workspace/RAIN-VIO/DataSheet/mav0/cam0/data/1403637175488318976.png", CV_LOAD_IMAGE_COLOR);
-
-    //定义图片面板
-    pangolin::View& rgb_image = pangolin::Display("rgb")
-            .SetBounds(0.0,0.4,0.0,0.4,(-1.0)*rgb.cols/rgb.rows)
+    image = cv::imread("../DataSheet/mav0/cam0/data/1403637175488318976.png", CV_LOAD_IMAGE_COLOR);
+    if(image.empty())
+    {
+        std::cerr << "Failed to load images, you should add the datasheet or image to the ../DataSheet/mav0/cam0/data/1403637175488318976.png" << std::endl;
+        return 1;
+    }
+    
+    pangolin::View& rgbimage = pangolin::Display("image")
+            .SetBounds(0.7,1.0,0.6,1.0,(-1.0)*image.cols/image.rows)
             .SetLock(pangolin::LockLeft, pangolin::LockBottom);
+    
+    pangolin::GlTexture imageTexture(image.cols,image.rows,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
 
-    //初始化
-    pangolin::GlTexture imageTexture(rgb.cols,rgb.rows,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
-
-    bool Follow = true;
-
-    int count = 0;
     while(1)
     {
-        count++;
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         d_cam.Activate(s_cam);
@@ -66,10 +64,10 @@ int main()
         glClearColor(1.0f,1.0f,1.0f,1.0f);
 
         //_FrameDrawer->DrawFrame(rgb);
-        imageTexture.Upload(rgb.data,GL_RGB,GL_UNSIGNED_BYTE);
+        imageTexture.Upload(image.data,GL_RGB,GL_UNSIGNED_BYTE);
 
         //display the image
-        rgb_image.Activate();
+        rgbimage.Activate();
         glColor3f(1.0,1.0,1.0);
 
         imageTexture.RenderToViewportFlipY();

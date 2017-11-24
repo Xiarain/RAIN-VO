@@ -45,9 +45,6 @@ Tracking::Tracking(const string &strSettingsFile)
     ImageHeight = fsSettings["Camera.height"];
     ImageWidth = fsSettings["Camera.width"];
 
-    ImageGridHeight = fsSettings["ImageGridHeight"];
-    ImageGridWidth = fsSettings["ImageGridWidth"];
-
     mnumFeatures = fsSettings["ORBextractor.numFeatures"];
     minDist = fsSettings["ORBextractor.minDist"];
 
@@ -78,6 +75,8 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     vector<pair<int, Eigen::Vector3d>> Features;
 
     mpCurrentFrame = new Frame(mpCamera, mpFeature, mstrSettingsFile, mnWindowSize);
+
+    mRawImage = image.clone();
 
     mpCurrentFrame->DetectKeyPoint(image, TimeStamps);
 
@@ -117,6 +116,9 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 //
         SlideWindow();
     }
+
+    if (!mpCurrentFrame->mViwerShow.empty())
+        mpViewer->UpdateFrame(this);
 }
 
 void Tracking::SlideWindow()
@@ -231,6 +233,11 @@ bool Tracking::InitialStructure()
 bool Tracking::TrackReferenceKeyFrame()
 {
 
+}
+
+void Tracking::SetViewer(Viewer *pViewer)
+{
+    mpViewer = pViewer;
 }
 
 } // namespace RAIN_VIO

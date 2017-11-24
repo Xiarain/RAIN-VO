@@ -7,9 +7,12 @@
 
 #include <string>
 #include <iostream>
+#include <mutex>
+
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
+#include <glog/logging.h>
 #include "Camera.h"
 
 using namespace std;
@@ -29,12 +32,19 @@ public:
     ~Feature();
 
     bool ProcessImage(const cv::Mat &im, const double &timestamp);
+
     void DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds);
+
     bool inBorder(const cv::Point2f &pt);
+
     void RejectWithF(void);
+
     void SetMask();
+
     void UpdateKeyPointID();
+
     vector<cv::Point2f> UndistoredPoints();
+
     cv::Mat UndistoredImage(const cv::Mat image);
 
     Camera *mpCamera;
@@ -54,6 +64,8 @@ public:
     cv::Mat mPreImage;
     cv::Mat mCurImage;
     cv::Mat mNextImageShow, mCurImageShow;
+    cv::Mat mViwerShow;
+    cv::Mat mViewerImage;
 
     bool EQUALIZE;
     cv::Mat CmaeraK;
@@ -69,6 +81,7 @@ public:
     vector<cv::Point2f> mvPrePointsPts;
     vector<cv::Point2f> mvCurPointsPts;
     vector<cv::Point2f> mvNextPointsPts;
+    vector<cv::Point2f> mvCurDisPointsPts;
 
 private:
 
@@ -82,6 +95,9 @@ private:
     vector<cv::KeyPoint> mvPreKeyPoints;
     vector<cv::KeyPoint> mvNextKeyPoints;
     vector<cv::KeyPoint> mvCurKeyPoints;
+
+    mutex mMutex;
+
 }; // class Feature
 
 } // namespce RAIN_VIO

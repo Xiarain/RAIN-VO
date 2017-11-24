@@ -41,8 +41,9 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
     mpFeature->ProcessImage(image, TimeStamps);
 
     mvFraPointsPts = mpFeature->UndistoredPoints(); // mvCurPointsPts
-
     mvFraPointsID = mpFeature->mvPointTrackID;
+    mvFraPointsCnt = mpFeature->mvPointTrackcnt;
+    mViwerShow = mpFeature->mViwerShow;
 
     mvFraFeatures.clear();
     for (int i = 0; i < mvFraPointsPts.size(); i++)

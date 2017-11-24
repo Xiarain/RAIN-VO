@@ -19,6 +19,7 @@ System::System(const string &strSettingsFile, const bool bOpenViwer)
 
     mptViewer = new thread(&Viewer::Run, mpViewer);
 
+    mpTracker->SetViewer(mpViewer);
 }
 
 /**

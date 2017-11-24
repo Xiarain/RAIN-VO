@@ -21,6 +21,7 @@ namespace RAIN_VIO
 {
 
 class Tracking;
+class Viewer;
 
 class System
 {

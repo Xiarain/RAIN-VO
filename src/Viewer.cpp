@@ -3,7 +3,7 @@
 //
 
 #include "Viewer.h"
-#include <pangolin/pangolin.h>
+
 
 namespace RAIN_VIO
 {
@@ -17,6 +17,28 @@ Viewer::Viewer(const string &strSettingPath)
         cerr << "Failed to open settings file at " << strSettingPath << endl;
         exit(-1);
     }
+
+    mImageHeight = fsSettings["Camera.height"];
+    mImageWidth = fsSettings["Camera.width"];
+}
+
+void Viewer::UpdateFrame(Tracking *pTracking)
+{
+    unique_lock<mutex> lock(mMutex);
+//    pTracking->mRawImage.copyTo(mframe);
+//    mvFraPointsID = pTracking->mpCurrentFrame->mvFraPointsID;
+//    mvFraPointsCnt = pTracking->mpCurrentFrame->mvFraPointsCnt;
+
+    mframe = pTracking->mpCurrentFrame->mViwerShow;
+    if (mframe.empty())
+    {
+        LOG(FATAL) << "the image is empty" << endl;
+    }
+
+    if (mframe.channels() == 1)
+        cv::cvtColor(mframe, mframe, CV_GRAY2RGB);
+
+
 }
 
 void Viewer::Run()
@@ -27,7 +49,7 @@ void Viewer::Run()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    pangolin::CreatePanel("menu").SetBounds(0.7,1.0,0.0,pangolin::Attach::Pix(175));
+    pangolin::CreatePanel("menu").SetBounds(0.6,1.0,0.0,0.2);
 
     // the name of the buttion; default setting; whether the selection box;
     pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
@@ -41,20 +63,41 @@ void Viewer::Run()
             pangolin::ModelViewLookAt(0,-0.7,-1.8, 0,0,0,0.0,-1.0, 0.0)
     );
 
+    pangolin::Handler3D handler(s_cam);
+
     pangolin::View& d_cam = pangolin::CreateDisplay()
-            .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f/768.0f)
+            .SetBounds(0.0, 1.0, 0.2, 1.0, -1024.0f/768.0f)
             .SetHandler(new pangolin::Handler3D(s_cam));
+
+    pangolin::View& rgbimage = pangolin::Display("image")
+            .SetBounds(0.6,1.0,0.5,1.0,(-1.0)*mImageWidth/mImageHeight)
+            .SetLock(pangolin::LockLeft, pangolin::LockBottom);
+
+    pangolin::GlTexture imageTexture(mImageWidth,mImageHeight,GL_RGB,false,0,GL_RGB,GL_UNSIGNED_BYTE);
 
     pangolin::OpenGlMatrix Twc;
     Twc.SetIdentity();
 
     while(1)
     {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         s_cam.Follow(Twc);
 
         d_cam.Activate(s_cam);
 
         glClearColor(1.0f,1.0f,1.0f,1.0f);
+
+        // the mutex lock is very important, if not, the image sometimes is blurred and program easily shutdown down
+        unique_lock<mutex> lock(mMutex);
+        imageTexture.Upload(mframe.data,GL_RGB,GL_UNSIGNED_BYTE);
+        lock.unlock();
+
+        //display the image
+        rgbimage.Activate();
+        glColor3f(1.0,1.0,1.0);
+
+        imageTexture.RenderToViewportFlipY();
 
         pangolin::FinishFrame();
     }
