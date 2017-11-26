@@ -14,11 +14,13 @@ namespace RAIN_VIO
 
 System::System(const string &strSettingsFile, const bool bOpenViwer)
 {
-    mpTracker = new Tracking(strSettingsFile);
-    mpViewer = new Viewer(strSettingsFile);
+    mpMap = new Map;
 
+    mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
+    mpViewer = new Viewer(strSettingsFile, mpMapDrawer);
     mptViewer = new thread(&Viewer::Run, mpViewer);
 
+    mpTracker = new Tracking(strSettingsFile, mpMap, mpMapDrawer);
     mpTracker->SetViewer(mpViewer);
 }
 

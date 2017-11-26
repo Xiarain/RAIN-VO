@@ -23,12 +23,13 @@ namespace RAIN_VIO
 {
 
 class Tracking;
+class MapDrawer;
 
 class Viewer
 {
 
 public:
-    Viewer(const string &strSettingPath);
+    Viewer(const string &strSettingPath, MapDrawer* pMapDrawer);
 
     void Run();
 
@@ -37,6 +38,7 @@ public:
 private:
 
     Tracking *mpTracking;
+    MapDrawer *mpMapDrawer;
 
     vector<cv::Point2f> mvFraPointsPts;
     vector<uint> mvFraPointsID;
@@ -46,7 +48,8 @@ private:
     cv::Mat mCurImageShow;
     double mImageHeight;
     double mImageWidth;
-    const double mFOCALLENGTH = 460.0;
+
+    float mViewpointX, mViewpointY, mViewpointZ, mViewpointF;
 
     mutex mMutex;
 

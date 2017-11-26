@@ -81,7 +81,6 @@ public:
     vector<cv::Point2f> mvPrePointsPts;
     vector<cv::Point2f> mvCurPointsPts;
     vector<cv::Point2f> mvNextPointsPts;
-    vector<cv::Point2f> mvCurDisPointsPts;
 
 private:
 

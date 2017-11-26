@@ -51,6 +51,8 @@ public:
 
     Eigen::Matrix<double, 3, 4> GetPose();
 
+    Eigen::Matrix<double, 3, 4> GetPoseInverse();
+
     void UpdatePoseMatrices();
 
     void SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc);
@@ -77,6 +79,8 @@ private:
 
     double ImageHeight;
     double ImageWidth;
+
+    std::mutex mMutexPose;
 
 };
 

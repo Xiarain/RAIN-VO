@@ -5,6 +5,8 @@ set( CMAKE_CXX_FLAGS "-std=c++11" )
 
 project(RAIN-VIO)
 
+LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+
 set(OpenCV_DIR "/home/rain/workspace/library/opencv-3.2.0/install/share/OpenCV")
 #set(Eigen3_DIR "/home/rain/workspace/Library/eigen3")
 
@@ -45,7 +47,9 @@ add_library(${PROJECT_NAME} SHARED
     src/Converter.cpp
     src/Viewer.cpp
     src/Optimizer.cpp
-    src/Parameters.cpp)
+    src/Parameters.cpp
+    src/MapDrawer.cpp
+)
 
 target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}

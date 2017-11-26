@@ -18,10 +18,27 @@ class Map;
 class KeyFrame
 {
 public:
-    KeyFrame(Frame &F, Map* pMap);
+    KeyFrame(Frame *F, Map *pMap);
 
     void SetPose(Eigen::Matrix<double, 3, 4> Tcw);
 
+    Eigen::Matrix<double, 3, 4> mTcw;
+    Eigen::Matrix<double, 3, 4> mTwc;
+
+    vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
+    vector<cv::Point2f> mvFraPointsPts;
+    vector<uint> mvFraPointsID;
+    vector<int> mvFraPointsCnt;
+
+    Eigen::Matrix<double, 3, 4> GetPose();
+
+    Eigen::Matrix<double, 3, 4> GetPoseInverse();
+
+private:
+
+    size_t mID;
+
+    mutex mMutexPose;
 };
 
 }

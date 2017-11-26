@@ -9,7 +9,7 @@
 namespace RAIN_VIO
 {
 
-Tracking::Tracking(const string &strSettingsFile)
+Tracking::Tracking(const string &strSettingsFile, Map *pMap,  MapDrawer *pMapDrawer): mpMap(pMap), mpMapDrawer(pMapDrawer)
 {
     mstrSettingsFile = strSettingsFile;
 
@@ -60,7 +60,6 @@ Tracking::Tracking(const string &strSettingsFile)
     LOG(INFO) << "- Image height: " << ImageHeight << endl;
     LOG(INFO) << "- Image width: " << ImageWidth << endl;
 
-    mpMap = new Map(mnWindowSize);
     mpInitializer = new Initializer(CmaeraK, mpMap, mnWindowSize);
     mpCamera = new Camera(strSettingsFile);
     mpFeature = new Feature(mpCamera, strSettingsFile, mnWindowSize);
@@ -113,7 +112,9 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 //        mpMap->Triangulate(&maFramesWin);
 
 //        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
-//
+
+//        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
+
         SlideWindow();
     }
 
@@ -209,6 +210,8 @@ bool Tracking::InitialStructure()
     for (int i = 0; i < mnFrameCount+1; i++)
     {
         maFramesWin.at(i)->SetPose(Rqwc[i], twc[i]);
+        KeyFrame * pKF = new KeyFrame(maFramesWin.at(i), mpMap);
+        mpMap->mvpKeyFrames.push_back(pKF);
     }
 
     for (auto &MapPoint : mpMap->mlMapPoints)

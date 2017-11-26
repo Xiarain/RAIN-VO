@@ -14,6 +14,8 @@
 #include "Tracking.h"
 #include "Frame.h"
 #include "Viewer.h"
+#include "MapDrawer.h"
+#include "Map.h"
 
 using namespace std;
 
@@ -21,7 +23,9 @@ namespace RAIN_VIO
 {
 
 class Tracking;
+class Map;
 class Viewer;
+class MapDrawer;
 
 class System
 {
@@ -29,8 +33,9 @@ class System
 private:
 
     Tracking *mpTracker;
+    Map *mpMap;
     Viewer *mpViewer;
-
+    MapDrawer *mpMapDrawer;
 
     std::thread* mptLocalMapping;
     std::thread* mptViewer;

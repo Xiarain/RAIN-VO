@@ -13,7 +13,7 @@ int MapPoint::EndFrame()
 }
 
 
-Map::Map(int nWindowSize)
+Map::Map()
 {
     mlMapPoints.clear();
 }
@@ -277,6 +277,12 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
 
         MapPoint.mPoint3d = MapPoint.mdEstimatedDepth*MapPoint.mvFeaturePerFrame[Frame0num].Point;
     } // for (auto &MapPoint : mlMapPoints)
+}
+
+vector<KeyFrame *> Map::GetAllKeyFrames()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return vector<KeyFrame *>(mvpKeyFrames.begin(), mvpKeyFrames.end());
 }
 
 }// namesapce RAIN_VIO

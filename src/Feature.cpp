@@ -164,7 +164,6 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
 
     mPreImage = mNextImage;
     mvPrePointsPts = mvNextPointsPts;
-    mvCurDisPointsPts = mvCurPointsPts;
 
     if (!mCurImageShow.empty() && mFeatureShow == 1)
     {
@@ -184,7 +183,8 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
         cv::putText(mCurImageShow, to_string(timefeature.toc()), cv::Point(10,70), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,23,0), 1, 0);
 
         //cv::imshow("Feature Detection Window", mCurImageShow); // to_string(timestamp)
-        cv::waitKey(20);
+        //cv::waitKey(20);
+        usleep(20000);
 
         mViwerShow = mCurImageShow.clone();
     }

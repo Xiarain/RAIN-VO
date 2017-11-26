@@ -12,6 +12,7 @@
 #include <glog/logging.h>
 
 #include "Frame.h"
+#include "KeyFrame.h"
 #include "Tracking.h"
 #include "Parameters.h"
 
@@ -21,6 +22,7 @@ namespace RAIN_VIO
 {
 
 class Frame;
+class KeyFrame;
 // 2D feature point in the per frame
 class FeaturePerFrame
 {
@@ -72,8 +74,9 @@ public:
 
     int mLastTrackNum;
     list<MapPoint> mlMapPoints;
+    vector<KeyFrame *> mvpKeyFrames;
 
-    Map(int nWindowSize);
+    Map();
 
     bool AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
 
@@ -88,6 +91,14 @@ public:
     void DebugShow();
 
     void Triangulate(array<Frame *, mnWindowSize+1> *paFramesWin);
+
+    vector<KeyFrame *> GetAllKeyFrames();
+
+    vector<MapPoint *> GetAllMapPoints();
+
+protected:
+
+    mutex mMutexMap;
 
 }; // class Map
 

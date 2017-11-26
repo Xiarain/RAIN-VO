@@ -85,12 +85,15 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
 
 void Frame::SetPose(Eigen::Matrix<double, 3, 4> Tcw)
 {
+    unique_lock<mutex> lock(mMutexPose);
     mTcw = Tcw;
     UpdatePoseMatrices();
 }
 
 void Frame::SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc)
 {
+    unique_lock<mutex> lock(mMutexPose);
+
     mTwc = Twc;
 
     mRwc = mTwc.block<3, 3>(0, 0);
@@ -109,6 +112,8 @@ void Frame::SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc)
  */
 void Frame::UpdatePoseMatrices()
 {
+    unique_lock<mutex> lock(mMutexPose);
+
     mRcw = mTcw.block<3, 3>(0, 0);
     mtcw = mTcw.block<3, 1>(0, 3);
 
@@ -121,9 +126,14 @@ void Frame::UpdatePoseMatrices()
 
 void Frame::SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc)
 {
+    unique_lock<mutex> lock(mMutexPose);
+
     mRqwc = Rqwc;
     mtwc = twc;
     mRwc = mRqwc.toRotationMatrix();
+
+    mTwc.block<3, 3>(0, 0) = mRwc;
+    mTwc.block<3, 1>(0, 3) = mtwc;
 
     mRcw = mRwc.inverse();
     mtcw = -mRwc.inverse()*mtwc;
@@ -132,13 +142,27 @@ void Frame::SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc)
     mTcw.block<3, 1>(0, 3) = mtcw;
 }
 
+Eigen::Matrix<double, 3, 4> Frame::GetPose()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mTwc;
+}
+
+Eigen::Matrix<double, 3, 4> Frame::GetPoseInverse()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mTcw;
+}
+
 Eigen::Matrix3d Frame::GetRotation()
 {
+    unique_lock<mutex> lock(mMutexPose);
     return mRwc;
 }
 
 Eigen::Vector3d Frame::GetTranslation()
 {
+    unique_lock<mutex> lock(mMutexPose);
     return mtwc;
 }
 

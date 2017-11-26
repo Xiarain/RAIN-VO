@@ -32,6 +32,7 @@ class Map;
 class GlobalSFM;
 class Initializer;
 class Viewer;
+class MapDrawer;
 
 
 enum eTrackingState
@@ -58,6 +59,7 @@ public:
     Initializer *mpInitializer;
     Feature *mpFeature;
     Viewer *mpViewer;
+    MapDrawer *mpMapDrawer;
 
     map<size_t, Frame *> mmpFrames;
 
@@ -76,7 +78,7 @@ public:
     static const int mnWindowSize = 10;
     bool EQUALIZE;
 
-    Tracking(const string &strSettingsFile);
+    Tracking(const string &strSettingsFile, Map *pMap, MapDrawer *pMapDrawer);
     Tracking();
     ~Tracking();
 
