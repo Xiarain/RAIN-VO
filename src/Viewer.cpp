@@ -95,15 +95,17 @@ void Viewer::Run()
         d_cam.Activate(s_cam);
 
         mpMapDrawer->DrawCurrentCamera(Twc);
-        mpMapDrawer->DrawKeyFrames(true, true);
-        mpMapDrawer->DrawMapPoints();
+//        mpMapDrawer->DrawKeyFrames(true, true);
+//        mpMapDrawer->DrawMapPoints();
 
         glClearColor(1.0f,1.0f,1.0f,1.0f);
 
         // the mutex lock is very important, if not, the image sometimes is blurred and program easily shutdown
-        unique_lock<mutex> lock(mMutex);
-        imageTexture.Upload(mframe.data,GL_RGB,GL_UNSIGNED_BYTE);
-        lock.unlock();
+        if (!mframe.empty())
+        {
+            unique_lock<mutex> lock(mMutex);
+            imageTexture.Upload(mframe.data,GL_RGB,GL_UNSIGNED_BYTE);
+        }
 
         //display the image
         rgbimage.Activate();
@@ -112,7 +114,9 @@ void Viewer::Run()
         imageTexture.RenderToViewportFlipY();
 
         pangolin::FinishFrame();
-    }
-}
+
+    } // while(1)
+
+} // Viewer::Run()
 
 } // namespace RAIN_VIO
