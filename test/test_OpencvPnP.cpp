@@ -20,10 +20,10 @@ void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
                         vector<cv::KeyPoint>& vKeyPoints1, vector<cv::KeyPoint>& vKeyPoints2,
                         vector<cv::DMatch>& vmatches);
 
-void PoseOptimization(const vector<cv::Point3f> vPoints3d, const vector<cv::Point2f> vPoints2d,
-                      const cv::Mat& K, const cv::Mat& R, const cv::Mat& t);
+void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
+                      cv::Mat& K, cv::Mat& R, cv::Mat& t);
 
-void CalcuReprojectionCost(const vector<cv::Point3f> vPoints3d, const vector<cv::Point2f> vPoints2d,
+void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<cv::Point2d> vPoints2d,
                            const cv::Mat& K, const cv::Mat& R, const cv::Mat& t);
 
 cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K);
@@ -63,8 +63,8 @@ int main(int argc, char** argv)
     gKd[2] = K.at<double>(0, 2); // cx
     gKd[3] = K.at<double>(1, 2); // cy
 
-    vector<cv::Point3f> vpts3d;
-    vector<cv::Point2f> vpts2d;
+    vector<cv::Point3d> vpts3d;
+    vector<cv::Point2d> vpts2d;
 
     for (cv::DMatch m:vmatches)
     {
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
 
     PoseOptimization(vpts3d, vpts2d, K, R, t);
 
-    CalcuReprojectionCost(vpts3d, vpts2d, K, R, t);
+    ComputeReprojectionCost(vpts3d, vpts2d, K, R, t);
 
     while(1)
     {
@@ -163,104 +163,106 @@ cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K)
 
 struct ReprojectionError2
 {
+    cv::Point2d observation;
 
-    ReprojectionError2(double observedx, double observedy)
-            : observedx(observedx), observedy(observedy) {}
+    ReprojectionError2(cv::Point2d& observation)
+    : observation(observation)
+            {
+            }
 
     template <typename T>
-    bool operator()(const T* const Rqcw, const T* const tcw, const T* const Point3D, T* resuduals) const
+    bool operator()(const T* const intrinsic, const T* const extrinsic, const T* const pos3d, T* residuals) const
     {
-        T Point[3];
-        ceres::QuaternionRotatePoint(Rqcw, Point3D, Point);
+        const T* r = extrinsic;
+        const T* t = &extrinsic[3];
 
-        Point[0] += tcw[0];
-        Point[1] += tcw[1];
-        Point[2] += tcw[2];
+        T pos_proj[3];
+        ceres::AngleAxisRotatePoint(r, pos3d, pos_proj);
 
-        // K[0] fx; K[1] fy; K[2] cx; K[3] cy;
-        // in the ceres BA example, it should apply second and fourth order radial distortion
-        // but in the usually, the feature point have been distortion in the previous step
-        T xp = 529.9*Point[0]/Point[2] + 325.1;
-        T yp = 521.0*Point[1]/Point[2] + 249.7;
+        // Apply the camera translation
+        pos_proj[0] += t[0];
+        pos_proj[1] += t[1];
+        pos_proj[2] += t[2];
 
-//        T xp = Point[0]/Point[2];
-//        T yp = Point[1]/Point[2];
+        const T x = pos_proj[0] / pos_proj[2];
+        const T y = pos_proj[1] / pos_proj[2];
 
-        resuduals[0] = xp - T(observedx);
-        resuduals[1] = yp - T(observedy);
+        const T fx = intrinsic[0];
+        const T fy = intrinsic[1];
+        const T cx = intrinsic[2];
+        const T cy = intrinsic[3];
+
+        // Apply intrinsic
+        const T u = fx * x + cx;
+        const T v = fy * y + cy;
+
+        residuals[0] = u - T(observation.x);
+        residuals[1] = v - T(observation.y);
 
         return true;
     }
 
-    static ceres::CostFunction* Create(const double observedx, const double observedy)
-    {
-        return (new ceres::AutoDiffCostFunction<ReprojectionError2, 2, 4, 3, 3>(new ReprojectionError2(observedx, observedy)));
-    }
-
-    double observedx;
-    double observedy;
-
 }; // struct ReprojectionError2
 
-void PoseOptimization(const vector<cv::Point3f> vPoints3d, const vector<cv::Point2f> vPoints2d,
-                      const cv::Mat& K, const cv::Mat& R, const cv::Mat& t)
+void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
+                      cv::Mat& K, cv::Mat& R, cv::Mat& t)
 {
+    cv::Mat intrinsic(cv::Matx41d(K.at<double>(0, 0), K.at<double>(1, 1), K.at<double>(0, 2), K.at<double>(1, 2)));
+
+    cv::Mat extrinsic(6, 1, CV_64FC1);
+    cv::Mat r;
+    cv::Rodrigues(R, r);
+    r.copyTo(extrinsic.rowRange(0, 3));
+    t.copyTo(extrinsic.rowRange(3, 6));
+
     ceres::Problem problem;
-    ceres::LocalParameterization* localParameterization = new ceres::QuaternionParameterization();
 
-    Eigen::Matrix3d Rtemp;
-    cv::cv2eigen(R, Rtemp);
+    problem.AddParameterBlock(extrinsic.ptr<double>(), 6);
 
-    double Rdcw[4];
-    double tdcw[4];
-    double Kd[4];
-    double Point3dw[3];
+    problem.AddParameterBlock(intrinsic.ptr<double>(), 4); // fx, fy, cx, cy
+    //problem.SetParameterBlockConstant(intrinsic.ptr<double>());
 
-    Rdcw[0] = Eigen::Quaterniond(Rtemp).w();
-    Rdcw[1] = Eigen::Quaterniond(Rtemp).x();
-    Rdcw[2] = Eigen::Quaterniond(Rtemp).y();
-    Rdcw[3] = Eigen::Quaterniond(Rtemp).z();
-
-    tdcw[0] = t.at<double>(0,0);
-    tdcw[1] = t.at<double>(0,1);
-    tdcw[2] = t.at<double>(0,2);
-
-//    Kd[0] = K.at<double>(0, 0); // fx
-//    Kd[1] = K.at<double>(1, 1); // fy
-//    Kd[2] = K.at<double>(0, 2); // cx
-//    Kd[3] = K.at<double>(1, 2); // cy
-
-    problem.AddParameterBlock(Rdcw, 4, localParameterization);
-    problem.AddParameterBlock(tdcw, 3);
+     ceres::LossFunction* loss_function = new ceres::HuberLoss(4);   // loss function make bundle adjustment robuster.
 
     for (int i = 0; i < vPoints3d.size(); i++)
     {
-        ceres::CostFunction* costFunction = ReprojectionError2::Create(vPoints2d[i].x, vPoints2d[i].y);
+        cv::Point2d observed = vPoints2d[i];
 
-        Point3dw[0] = vPoints3d[i].x;
-        Point3dw[1] = vPoints3d[i].y;
-        Point3dw[2] = vPoints3d[i].z;
+        ceres::CostFunction* cost_function = new ceres::AutoDiffCostFunction<ReprojectionError2, 2, 4, 6, 3>(new ReprojectionError2(observed));
 
-//        Point3dw[0] = K.at<double>(0, 0)*vPoints3d[i].x/vPoints3d[i].z + K.at<double>(0, 2);
-//        Point3dw[1] = K.at<double>(1, 1)*vPoints3d[i].y/vPoints3d[i].z + K.at<double>(1, 2);
-//        Point3dw[2] = 1;
-
-        problem.AddResidualBlock(costFunction, nullptr, Rdcw, tdcw, Point3dw);
+        problem.AddResidualBlock(
+                cost_function, loss_function,
+                intrinsic.ptr<double>(), extrinsic.ptr<double>(),
+                &vPoints3d[i].x);
     }
 
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
     options.max_solver_time_in_seconds = 0.3;
+
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
-    cout << summary.BriefReport() << endl;
+    if (!summary.IsSolutionUsable())
+    {
+        cout << "Bundle Adjustment failed." << std::endl;
+    }
+    else
+    {
+        // Display statistics about the minimization
+        cout << summary.BriefReport() << endl
+                  << " residuals: " << summary.num_residuals << endl
+                  << " Initial RMSE: " << sqrt(summary.initial_cost / summary.num_residuals) << endl
+                  << " Final RMSE: " << sqrt(summary.final_cost / summary.num_residuals) << endl
+                  << " Time (s): " << summary.total_time_in_seconds << endl
+                  << std::endl;
 
-    cout << tdcw[0] << endl << tdcw[1] << endl << tdcw[2] << endl;
-}
+        cout << extrinsic << endl;
+    }
+} // void PoseOptimization()
 
-void CalcuReprojectionCost(const vector<cv::Point3f> vPoints3d, const vector<cv::Point2f> vPoints2d,
+void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<cv::Point2d> vPoints2d,
                            const cv::Mat& K, const cv::Mat& R, const cv::Mat& t)
 {
     double cost=0;
@@ -308,7 +310,7 @@ void CalcuReprojectionCost(const vector<cv::Point3f> vPoints3d, const vector<cv:
 
     for (auto residul:vresiduals)
     {
-        cost += (residul[0]*residul[0] + residul[1]*residul[1]);
+        cost += sqrt(residul[0]*residul[0] + residul[1]*residul[1]);
     }
 
     cout << "cost: " << cost << endl;

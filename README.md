@@ -1,4 +1,4 @@
-# RAIN_VIO
+# RAIN_VO
 
 ## 1.Description
 The vision odometry
