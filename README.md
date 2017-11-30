@@ -57,13 +57,17 @@ $ make -j2
 
 ## 4.Test
 1. **test_glog** \
-make the test of the google glog. You should create the new folder called log and if not the log file can
+Make the test of the google glog. You should create the new folder called log and if not the log file can
 not be saved.
 
 2. **test_pangolin** \
-make the test of the Pangloin. In order to make the display more concise, use the multiimage display.
+Make the test of the Pangloin. In order to make the display more concise, use the multiimage display.
 you should add the datasheet in the project and the test will read the image from the datasheet and you also can modify
 the code to add the your image. But you should have better to add the image come from the datasheet.
+
+3. **test_Opencv_PnP** \
+Use the OpenCV PnP API to solve the transformation between the two frames come from RGBD sensor. Use ceres optimization
+library to optimize the PnP solution.
 
 ## 5.FAQ
 
