@@ -1,76 +1,49 @@
 //
-// Created by rain on 17-11-27.
+// Created by rain on 17-12-1.
 //
-
-#include "string"
-#include "iostream"
+#include <iostream>
 
 #include <eigen3/Eigen/Dense>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
-#include <ceres/ceres.h>
-#include <ceres/rotation.h>
 
+#include "pose_local_parameterization.h"
+#include "se3.h"
 
 using namespace std;
 
+cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K);
 void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
                         vector<cv::KeyPoint>& vKeyPoints1, vector<cv::KeyPoint>& vKeyPoints2,
                         vector<cv::DMatch>& vmatches);
-
 void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
                       cv::Mat& K, cv::Mat& R, cv::Mat& t);
 
 void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<cv::Point2d> vPoints2d,
-                           const cv::Mat& K, const cv::Mat& R, const cv::Mat& t);
+                             const cv::Mat& K, const cv::Mat& R, const cv::Mat& t);
 
-cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K);
-
-struct ReprojectionError2
+int main(int argc, char* argv[])
 {
-    cv::Point2d observation;
+    cout << "test the BA" << endl;
 
-    ReprojectionError2(cv::Point2d& observation)
-            : observation(observation)
     {
+        cout << "the SE3 class test " << endl;
+        Eigen::Matrix3d R = Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d(0,0,1)).toRotationMatrix();
+        Eigen::Vector3d t(1,0,0);
+        SE3 SE3Rt(R, t);
+
+        Vector6d updatese3;
+        updatese3.setZero();
+        updatese3(0, 0) = 1e-4d;
+        SE3 se3updated = SE3::exp(updatese3)*SE3Rt;
+
+        cout << se3updated.log().transpose() << endl;
+        cout << SE3Rt.log().transpose()  << endl;
+        cout << se3updated << endl;
     }
 
-    template <typename T>
-    bool operator()(const T* const intrinsic, const T* const extrinsic, const T* const pos3d1, T* residuals) const
-    {
-        const T* r = extrinsic;
-        const T* t = &extrinsic[3];
-
-        T pos3d2[3];
-        ceres::AngleAxisRotatePoint(r, pos3d1, pos3d2);
-
-        pos3d2[0] += t[0];
-        pos3d2[1] += t[1];
-        pos3d2[2] += t[2];
-
-        const T x = pos3d2[0] / pos3d2[2];
-        const T y = pos3d2[1] / pos3d2[2];
-
-        const T fx = intrinsic[0];
-        const T fy = intrinsic[1];
-        const T cx = intrinsic[2];
-        const T cy = intrinsic[3];
-
-        const T u = fx * x + cx;
-        const T v = fy * y + cy;
-
-        residuals[0] = u - T(observation.x);
-        residuals[1] = v - T(observation.y);
-
-        return true;
-    }
-
-}; // struct ReprojectionError2
-
-int main(int argc, char** argv)
-{
     const string strimg1FilePath = "../test/test_pnp_material/1.png";
     const string strimg2FilePath = "../test/test_pnp_material/2.png";
     const string strimg1depthFilePath = "../test/test_pnp_material/1_depth.png";
@@ -89,8 +62,6 @@ int main(int argc, char** argv)
 
     cv::Mat showImg;
     cv::drawMatches(img2, vkeypoints2, img1, vkeypoints1, vmatches, showImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255));
-
-    cout << "the matches between the two images " << vmatches.size() << endl;
 
     cv::Mat K = (cv::Mat_<double> (3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
 
@@ -112,23 +83,17 @@ int main(int argc, char** argv)
         vpts2d.push_back(vkeypoints2[m.trainIdx].pt);
     }
 
-    cout << "3d-2d pairs: " << vpts3d.size() << endl;
-
     cv::Mat r, t;
     cv::solvePnP(vpts3d, vpts2d, K, cv::Mat(), r, t, false);
-//    cv::solvePnPRansac(vpts3d, vpts2d, K, cv::Mat(), r, t, false);
 
     cv::Mat R;
     cv::Rodrigues(r, R);
-
-    cout << "R " << R << endl;
-    cout << "t " << t << endl;
 
     PoseOptimization(vpts3d, vpts2d, K, R, t);
 
     ComputeReprojectionCost(vpts3d, vpts2d, K, R, t);
 
-    while(1)
+    while (1)
     {
         cv::imshow(" ", showImg);
         cv::waitKey(10);
@@ -137,6 +102,15 @@ int main(int argc, char** argv)
     return 0;
 }
 
+cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K)
+{
+    cv::Point2d pts2d;
+
+    pts2d.x = (p.x - K.at<double>(0, 2))/K.at<double>(0, 0);
+    pts2d.y = (p.y - K.at<double>(1, 2))/K.at<double>(1, 1);
+
+    return pts2d;
+}
 
 void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
                         vector<cv::KeyPoint>& vKeyPoints1, vector<cv::KeyPoint>& vKeyPoints2,
@@ -166,9 +140,6 @@ void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
         if (dist > maxdist) maxdist = dist;
     }
 
-    cout << "max dist " << maxdist << endl;
-    cout << "min dist " << mindist << endl;
-
     for (int i = 0; i < descriptors1.rows; i++)
     {
         if (vmatch[i].distance <= max(2*mindist, 30.0))
@@ -178,33 +149,30 @@ void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
     }
 }
 
-cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K)
-{
-    cv::Point2d pts2d;
-
-    pts2d.x = (p.x - K.at<double>(0, 2))/K.at<double>(0, 0);
-    pts2d.y = (p.y - K.at<double>(1, 2))/K.at<double>(1, 1);
-
-    return pts2d;
-}
-
 void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
                       cv::Mat& K, cv::Mat& R, cv::Mat& t)
 {
     cv::Mat intrinsic(cv::Matx41d(K.at<double>(0, 0), K.at<double>(1, 1), K.at<double>(0, 2), K.at<double>(1, 2)));
 
-    cv::Mat extrinsic(6, 1, CV_64FC1);
-    cv::Mat r;
-    cv::Rodrigues(R, r);
-    r.copyTo(extrinsic.rowRange(0, 3));
-    t.copyTo(extrinsic.rowRange(3, 6));
+    cv::Mat extrinsic(7, 1, CV_64FC1);
+
+    {
+        Eigen::Matrix3d Reigen;
+        cv::cv2eigen(R, Reigen);
+        Eigen::Quaterniond Rq(Reigen);
+        extrinsic.ptr<double>()[0] = Rq.x();
+        extrinsic.ptr<double>()[1] = Rq.y();
+        extrinsic.ptr<double>()[2] = Rq.z();
+        extrinsic.ptr<double>()[3] = Rq.w();
+        t.copyTo(extrinsic.rowRange(4, 7));
+    }
+
+    cout << "extrinsic: " << endl << extrinsic.t() << endl;
 
     ceres::Problem problem;
 
-    problem.AddParameterBlock(extrinsic.ptr<double>(), 6);
+    problem.AddParameterBlock(extrinsic.ptr<double>(), 7, new PoseLocalParameterization());
 
-    problem.AddParameterBlock(intrinsic.ptr<double>(), 4); // fx, fy, cx, cy
-    //problem.SetParameterBlockConstant(intrinsic.ptr<double>());
 
     ceres::LossFunction* loss_function = new ceres::HuberLoss(4);   // loss function make bundle adjustment robuster.
 
@@ -212,12 +180,15 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
     {
         cv::Point2d observed = vPoints2d[i];
 
-        ceres::CostFunction* cost_function = new ceres::AutoDiffCostFunction<ReprojectionError2, 2, 4, 6, 3>(new ReprojectionError2(observed));
+        ceres::CostFunction* costfunction = new ReprojectionErrorSE3(K.at<double>(0, 0), K.at<double>(1, 1),
+                                                                     K.at<double>(0, 2), K.at<double>(1, 2),
+                                                                     observed.x, observed.y);
 
         problem.AddResidualBlock(
-                cost_function, loss_function,
-                intrinsic.ptr<double>(), extrinsic.ptr<double>(),
-                &vPoints3d[i].x);
+                costfunction, nullptr,
+                extrinsic.ptr<double>(), &vPoints3d[i].x);
+
+        problem.AddParameterBlock(&vPoints3d[i].x, 3);
     }
 
     ceres::Solver::Options options;
@@ -246,7 +217,7 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
 } // void PoseOptimization()
 
 void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<cv::Point2d> vPoints2d,
-                           const cv::Mat& K, const cv::Mat& R, const cv::Mat& t)
+                             const cv::Mat& K, const cv::Mat& R, const cv::Mat& t)
 {
     double cost=0;
     vector<Eigen::Vector2d> vresiduals;
@@ -287,5 +258,6 @@ void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<c
 
     cost *= 0.5;
 
-    cout << "cost: " << cost << endl;
+    cout << "Compute Reprojection Cost: " << cost << endl;
 }
+

@@ -63,11 +63,15 @@ not be saved.
 2. **test_pangolin** \
 Make the test of the Pangloin. In order to make the display more concise, use the multiimage display.
 you should add the datasheet in the project and the test will read the image from the datasheet and you also can modify
-the code to add the your image. But you should have better to add the image come from the datasheet.
+the code to add the your image.
 
 3. **test_Opencv_PnP** \
 Use the OpenCV PnP API to solve the transformation between the two frames come from RGBD sensor. Use ceres optimization
-library to optimize the PnP solution.
+library and numerical derivative to optimize the PnP solution.
+
+4. **test_ceres** \
+Use the ceres to optimize the solution from the Opencv PnP. Compute the jacobian matrix of the pinhole camera projection 
+model and use the analytical derivative mode to optimize. 
 
 ## 5.FAQ
 

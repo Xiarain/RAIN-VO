@@ -61,6 +61,9 @@ class Optimizer
 {
 
 public:
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
     void static PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap);
 
     Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
