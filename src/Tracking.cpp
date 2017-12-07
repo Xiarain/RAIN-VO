@@ -109,14 +109,23 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     }
     else
     {
-//        mpMap->Triangulate(&maFramesWin);
+        TrackReferenceKeyFrame();
 
-//        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
+        mpMap->Triangulate(&maFramesWin);
+
+        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
+
+        Optimizer::ComputeReprojectionCost(8, maFramesWin.at(8) ,mpMap);
 
 //        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
 
         SlideWindow();
     }
+
+    cv::waitKey(0);
+
+    if (!mpCurrentFrame->mViwerShow.empty())
+        cv::imshow(" ", mpCurrentFrame->mViwerShow);
 
     if (!mpCurrentFrame->mViwerShow.empty())
         mpViewer->UpdateFrame(this);
@@ -235,6 +244,60 @@ bool Tracking::InitialStructure()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
+    vector<cv::Point2f> vPoint2d;
+    vector<cv::Point3f> vPoint3d;
+
+    // TODO the MapPoint should build a reverse file
+    for (auto &MapPoint : mpMap->mlMapPoints)
+    {
+        MapPoint.mnUsedNum = (int) MapPoint.mvFeaturePerFrame.size();
+        if (!(MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize - 2))
+            continue;
+
+        if (!(MapPoint.mdEstimatedDepth > 0))
+            continue;
+
+        int MapPointID = MapPoint.mnFeatureID; // the ID comes from the feature point detection
+
+        auto it = find_if(mpCurrentFrame->mvFraFeatures.begin(), mpCurrentFrame->mvFraFeatures.end(), [MapPointID](const pair<uint, Eigen::Vector3d> &it)
+                {
+                    return it.first == MapPointID;
+                });
+
+        if (it == mpCurrentFrame->mvFraFeatures.end())
+        {
+            continue;
+        }
+        else
+        {
+            vPoint2d.emplace_back(cv::Point2d((float)it.base()->second[0]/it.base()->second[2], (float)it.base()->second[1]/it.base()->second[2]));
+        }
+
+        vPoint3d.emplace_back(Converter::toCvPoint3f(MapPoint.mPoint3d));
+    }
+
+    LOG_IF(FATAL, vPoint3d.size() < 20) << " the number of feature is too littel: " << vPoint3d.size() << endl;;
+
+    cv::Mat R, rvec, t, D, K;
+    K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0,
+                                   0, 1.0, 0,
+                                   0, 0, 1.0);
+
+    if (!cv::solvePnP(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false))
+    {
+        LOG(ERROR) << " failed in solving the PnP problem " << endl;
+        return false;
+    }
+
+    cv::Rodrigues(rvec, R);
+
+    // from the camera to the world
+    {
+        Eigen::MatrixXd Rwc;
+        cv::cv2eigen(R, Rwc);
+        Eigen::MatrixXd twc;
+        cv::cv2eigen(t,twc);
+    }
 
 }
 

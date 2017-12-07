@@ -58,10 +58,12 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
     double tdcw[4];
     double Point3dw[3];
 
-    Rdcw[0] = Eigen::Quaterniond(pFrame->GetRotation()).w();
-    Rdcw[1] = Eigen::Quaterniond(pFrame->GetRotation()).x();
-    Rdcw[2] = Eigen::Quaterniond(pFrame->GetRotation()).y();
-    Rdcw[3] = Eigen::Quaterniond(pFrame->GetRotation()).z();
+//    Rdcw = &Eigen::Quaterniond(pFrame->GetRotation()).x();
+
+    Rdcw[3] = Eigen::Quaterniond(pFrame->GetRotation()).w();
+    Rdcw[0] = Eigen::Quaterniond(pFrame->GetRotation()).x();
+    Rdcw[1] = Eigen::Quaterniond(pFrame->GetRotation()).y();
+    Rdcw[2] = Eigen::Quaterniond(pFrame->GetRotation()).z();
 
     tdcw[0] = pFrame->GetTranslation()[0];
     tdcw[1] = pFrame->GetTranslation()[1];
@@ -96,8 +98,66 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
-    LOG(INFO) << "the " << IdxWin  << " frame" <<  endl;
-    LOG(INFO) << summary.BriefReport() << endl;
+    LOG(INFO) << "the " << IdxWin  << " frame: " <<  endl;
+    LOG(INFO) << summary.BriefReport()
+              << " residuals number: " << summary.num_residuals << endl
+              << " Initial RMSE: " << sqrt(summary.initial_cost / summary.num_residuals) << endl
+              << " Final RMSE: " << sqrt(summary.final_cost / summary.num_residuals) << endl
+              << " Time (s): " << summary.total_time_in_seconds << endl;
+}
+
+void Optimizer::ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap)
+{
+    double cost=0;
+    vector<Eigen::Vector2d> vresiduals;
+
+    vresiduals.resize(pFrame->mvFraPointsPts.size());
+
+    double Point3dw[3];
+    double Point3dw0[3];
+    double Point3dw1[3];
+
+    size_t i=0;
+
+    for (auto &MapPoint : pMap->mlMapPoints)
+    {
+        if (!(MapPoint.mdEstimatedDepth > 0))
+            continue;
+
+        if ((MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame < IdxWin && MapPoint.EndFrame() > IdxWin))
+        {
+            FeaturePerFrame featurePerFrame = MapPoint.mvFeaturePerFrame.at((size_t)(IdxWin-MapPoint.mnStartFrame));
+
+            // 2d feature point
+
+            Point3dw[0] = MapPoint.mPoint3d[0];
+            Point3dw[1] = MapPoint.mPoint3d[1];
+            Point3dw[2] = MapPoint.mPoint3d[2];
+
+            ceres::QuaternionRotatePoint(&Eigen::Quaterniond(pFrame->GetRotation()).x(), Point3dw, Point3dw1);
+
+            Point3dw1[0] += pFrame->GetTranslation()[0];
+            Point3dw1[1] += pFrame->GetTranslation()[1];
+            Point3dw1[2] += pFrame->GetTranslation()[2];
+
+            double xp = Point3dw1[0]/Point3dw1[2];
+            double yp = Point3dw1[1]/Point3dw1[2];
+
+            vresiduals[i][0] = xp - featurePerFrame.Point[0];
+            vresiduals[i][1] = yp - featurePerFrame.Point[1];
+
+            i++;
+        }
+    }
+
+    for (auto residul:vresiduals)
+    {
+        cost += (residul[0]*residul[0] + residul[1]*residul[1]);
+    }
+
+    cost *= 0.5;
+
+     cout << "cost: " << cost << endl;
 }
 
 } // namespace RAIN_VIO

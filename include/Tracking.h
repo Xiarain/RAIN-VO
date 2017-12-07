@@ -8,10 +8,11 @@
 #include <string>
 #include <iostream>
 #include <mutex>
+#include <eigen3/Eigen/Dense>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
-
+#include <opencv2/core/eigen.hpp>
 #include "System.h"
 #include "Camera.h"
 #include "Frame.h"

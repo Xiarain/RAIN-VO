@@ -361,7 +361,7 @@ inline Eigen::Quaterniond toQuaterniond(const Eigen::Vector3d& v3d, double* angl
 
 inline std::ostream &operator<< (std::ostream &os, const SE3 &SE3_)
 {
-    os << std::endl << SE3_.GetTranslation().transpose()
+    os << SE3_.GetTranslation().transpose() << " "
        << SE3_.GetRotation().w() << " "
        << SE3_.GetRotation().x() << " "
        << SE3_.GetRotation().y() << " "

@@ -217,7 +217,7 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
     {
         MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
 
-        if (!MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < mnWindowSize-2)
+        if (!(MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-2))
             continue;
 
         if (MapPoint.mdEstimatedDepth > 0)

@@ -80,7 +80,8 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
     }
 
     // histogram equalization for the image
-    if (EQUALIZE) {
+    if (EQUALIZE)
+    {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
         clahe->apply(image.rowRange(0, (int)ImageHeight), image);
     }
@@ -143,8 +144,8 @@ bool Feature::ProcessImage(const cv::Mat &image, const double &timestamp)
 #endif
 
     }
-    else
-    {
+    else{
+
         mvPointsPts.clear();
         mvKeyPoints.clear();
     }

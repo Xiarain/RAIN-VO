@@ -17,8 +17,10 @@ System::System(const string &strSettingsFile, const bool bOpenViwer)
     mpMap = new Map;
 
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
-    mpViewer = new Viewer(strSettingsFile, mpMapDrawer);
-    mptViewer = new thread(&Viewer::Run, mpViewer);
+    mpViewer = new Viewer(strSettingsFile , mpMapDrawer);
+
+    if (false)
+        mptViewer = new thread(&Viewer::Run, mpViewer);
 
     mpTracker = new Tracking(strSettingsFile, mpMap, mpMapDrawer);
     mpTracker->SetViewer(mpViewer);

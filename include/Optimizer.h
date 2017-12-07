@@ -66,6 +66,8 @@ public:
 
     void static PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap);
 
+    void static ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap);
+
     Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
 
     std::vector<double> GetReprojectionErrorNorms(const ceres::Problem& problem);

@@ -26,7 +26,7 @@ void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<c
 
 int main(int argc, char* argv[])
 {
-    cout << "test the BA" << endl;
+    cout << "test the BA with the analytical derivative." << endl;
 
     {
         cout << "the SE3 class test " << endl;
@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
     if (img1.empty())
     {
         cout << "can not load the image " << strimg1FilePath << endl;
+        return 0;
     }
     cv::Mat img2 = cv::imread(strimg2FilePath, CV_LOAD_IMAGE_COLOR);
     cv::Mat img1depth = cv::imread(strimg1depthFilePath, CV_LOAD_IMAGE_UNCHANGED);
@@ -160,6 +161,7 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
         Eigen::Matrix3d Reigen;
         cv::cv2eigen(R, Reigen);
         Eigen::Quaterniond Rq(Reigen);
+
         extrinsic.ptr<double>()[0] = Rq.x();
         extrinsic.ptr<double>()[1] = Rq.y();
         extrinsic.ptr<double>()[2] = Rq.z();
@@ -174,7 +176,7 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
     problem.AddParameterBlock(extrinsic.ptr<double>(), 7, new PoseLocalParameterization());
 
 
-    ceres::LossFunction* loss_function = new ceres::HuberLoss(4);   // loss function make bundle adjustment robuster.
+    ceres::LossFunction* lossfunction = new ceres::HuberLoss(4);   // loss function make bundle adjustment robuster.
 
     for (int i = 0; i < vPoints3d.size(); i++)
     {
@@ -185,7 +187,7 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
                                                                      observed.x, observed.y);
 
         problem.AddResidualBlock(
-                costfunction, nullptr,
+                costfunction, lossfunction,
                 extrinsic.ptr<double>(), &vPoints3d[i].x);
 
         problem.AddParameterBlock(&vPoints3d[i].x, 3);

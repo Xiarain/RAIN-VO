@@ -79,6 +79,7 @@ int main(int argc, char** argv)
     if (img1.empty())
     {
         cout << "can not load the image " << strimg1FilePath << endl;
+        return 0;
     }
     cv::Mat img2 = cv::imread(strimg2FilePath, CV_LOAD_IMAGE_COLOR);
     cv::Mat img1depth = cv::imread(strimg1depthFilePath, CV_LOAD_IMAGE_UNCHANGED);
