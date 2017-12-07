@@ -22,8 +22,8 @@ public:
 
     void SetPose(Eigen::Matrix<double, 3, 4> Tcw);
 
-    Eigen::Matrix<double, 3, 4> mTcw;
     Eigen::Matrix<double, 3, 4> mTwc;
+    Eigen::Matrix<double, 3, 4> mTcw;
 
     vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
     vector<cv::Point2f> mvFraPointsPts;
@@ -41,7 +41,7 @@ private:
     mutex mMutexPose;
 };
 
-}
+} // class KeyFrame
 
 
 

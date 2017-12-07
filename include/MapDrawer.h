@@ -30,7 +30,7 @@ public:
 
     void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc);
 
-    void SetCurrentCameraPose(const Eigen::Matrix<double, 3, 4> &Tcw);
+    void SetCurrentCameraPose(const Eigen::Matrix<double, 3, 4> &Twc);
 
 //    void SetReferenceKeyFrame(KeyFrame *pKF);
 

@@ -83,6 +83,16 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
 
 }
 
+inline size_t Frame::GetFrameID()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mID;
+}
+
+/**
+ * @brief
+ * @param Twcx from the world to the camera
+ */
 void Frame::SetPose(Eigen::Matrix<double, 3, 4> Tcw)
 {
     unique_lock<mutex> lock(mMutexPose);
@@ -90,6 +100,10 @@ void Frame::SetPose(Eigen::Matrix<double, 3, 4> Tcw)
     UpdatePoseMatrices();
 }
 
+/**
+ * @brief
+ * @param Tcwx from the camera to the world
+ */
 void Frame::SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc)
 {
     unique_lock<mutex> lock(mMutexPose);
@@ -124,46 +138,55 @@ void Frame::UpdatePoseMatrices()
     mTwc.block<3, 1>(0, 3) = mtwc;
 }
 
-void Frame::SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc)
+/**
+ * @brief
+ * @param Rqcw from the world to the camera
+ * @param tcw
+ */
+void Frame::SetPose(Eigen::Quaterniond Rqcw, Eigen::Vector3d tcw)
 {
     unique_lock<mutex> lock(mMutexPose);
 
-    mRqwc = Rqwc;
-    mtwc = twc;
-    mRwc = mRqwc.toRotationMatrix();
-
-    mTwc.block<3, 3>(0, 0) = mRwc;
-    mTwc.block<3, 1>(0, 3) = mtwc;
-
-    mRcw = mRwc.inverse();
-    mtcw = -mRwc.inverse()*mtwc;
+    mRqcw = Rqcw;
+    mtcw = tcw;
+    mRcw = mRqcw.toRotationMatrix();
 
     mTcw.block<3, 3>(0, 0) = mRcw;
     mTcw.block<3, 1>(0, 3) = mtcw;
+
+    mRwc = mRcw.inverse();
+    mtwc = -mRcw.inverse()*mtcw;
+
+    mTwc.block<3, 3>(0, 0) = mRwc;
+    mTwc.block<3, 1>(0, 3) = mtwc;
 }
 
+/**
+ * @brief
+ * @return from the world to the camera
+ */
 Eigen::Matrix<double, 3, 4> Frame::GetPose()
-{
-    unique_lock<mutex> lock(mMutexPose);
-    return mTwc;
-}
-
-Eigen::Matrix<double, 3, 4> Frame::GetPoseInverse()
 {
     unique_lock<mutex> lock(mMutexPose);
     return mTcw;
 }
 
+Eigen::Matrix<double, 3, 4> Frame::GetPoseInverse()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mTwc;
+}
+
 Eigen::Matrix3d Frame::GetRotation()
 {
     unique_lock<mutex> lock(mMutexPose);
-    return mRwc;
+    return mRcw;
 }
 
 Eigen::Vector3d Frame::GetTranslation()
 {
     unique_lock<mutex> lock(mMutexPose);
-    return mtwc;
+    return mtcw;
 }
 
 } // namespace RAIN_VIO

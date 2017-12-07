@@ -174,8 +174,8 @@ bool Tracking::InitialStructure()
     Eigen::Vector3d RelativeT;
     int l = 0;
 
-    Eigen::Quaterniond Rqwc[mnFrameCount+1];
-    Eigen::Vector3d twc[mnFrameCount+1];
+    Eigen::Quaterniond Rqcw[mnFrameCount+1];
+    Eigen::Vector3d tcw[mnFrameCount+1];
     map<int, Eigen::Vector3d> mSFMPoint3d;
 
     vector<SFMFeature> vSFMFeature;
@@ -208,7 +208,7 @@ bool Tracking::InitialStructure()
 
     GlobalSFM GSFM;
 
-    if (!GSFM.Construct(mnFrameCount+1, Rqwc, twc, l, RelativeR, RelativeT, vSFMFeature, mSFMPoint3d))
+    if (!GSFM.Construct(mnFrameCount+1, Rqcw, tcw, l, RelativeR, RelativeT, vSFMFeature, mSFMPoint3d))
     {
         LOG(ERROR) << "global SFM failed " << endl;
         eMarginflag = MARGINOLD;
@@ -218,7 +218,7 @@ bool Tracking::InitialStructure()
     // the set the pose of the keyframes in the slide window
     for (int i = 0; i < mnFrameCount+1; i++)
     {
-        maFramesWin.at(i)->SetPose(Rqwc[i], twc[i]);
+        maFramesWin.at(i)->SetPose(Rqcw[i], tcw[i]);
         KeyFrame * pKF = new KeyFrame(maFramesWin.at(i), mpMap);
         mpMap->mvpKeyFrames.push_back(pKF);
     }

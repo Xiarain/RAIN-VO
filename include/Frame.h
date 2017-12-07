@@ -22,8 +22,8 @@ class Frame
 
 public:
 
-    Eigen::Matrix<double, 3, 4> mTcw;
     Eigen::Matrix<double, 3, 4> mTwc;
+    Eigen::Matrix<double, 3, 4> mTcw;
 
     int mnWindowSize;
     cv::Mat mImageShow;
@@ -38,10 +38,7 @@ public:
 
     ~Frame();
 
-    size_t GetFrameID()
-    {
-        return mID;
-    }
+    inline size_t GetFrameID();
 
     void DetectKeyPoint(const cv::Mat &image, const double &TimeStamps);
 
@@ -49,15 +46,16 @@ public:
 
     void SetPoseInverse(Eigen::Matrix<double, 3, 4> Twc);
 
+    void SetPose(Eigen::Quaterniond Rqcw, Eigen::Vector3d tcw);
+
     Eigen::Matrix<double, 3, 4> GetPose();
 
     Eigen::Matrix<double, 3, 4> GetPoseInverse();
 
     void UpdatePoseMatrices();
 
-    void SetPose(Eigen::Quaterniond Rqwc, Eigen::Vector3d twc);
-
     Eigen::Matrix3d GetRotation();
+
     Eigen::Vector3d GetTranslation();
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -71,11 +69,11 @@ private:
     Feature *mpFeature;
     Camera *mpCamera;
 
-    Eigen::Matrix3d mRcw;
-    Eigen::Vector3d mtcw;
     Eigen::Matrix3d mRwc;
     Eigen::Vector3d mtwc;
-    Eigen::Quaterniond mRqwc;
+    Eigen::Matrix3d mRcw;
+    Eigen::Vector3d mtcw;
+    Eigen::Quaterniond mRqcw;
 
     double ImageHeight;
     double ImageWidth;

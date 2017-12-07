@@ -182,10 +182,10 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
 }
 
 // from the wrold to camera
-void MapDrawer::SetCurrentCameraPose(const Eigen::Matrix<double, 3, 4> &Tcw)
+void MapDrawer::SetCurrentCameraPose(const Eigen::Matrix<double, 3, 4> &Twc)
 {
     unique_lock<mutex> lock(mMutexCamera);
-    mCameraPose = Tcw;
+    mCameraPose = Twc;
 }
 
 void MapDrawer::GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix &M)
