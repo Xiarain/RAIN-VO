@@ -38,7 +38,7 @@ public:
 
     ~Frame();
 
-    inline size_t GetFrameID();
+    size_t GetFrameID();
 
     void DetectKeyPoint(const cv::Mat &image, const double &TimeStamps);
 
@@ -57,6 +57,10 @@ public:
     Eigen::Matrix3d GetRotation();
 
     Eigen::Vector3d GetTranslation();
+
+    Eigen::Matrix3d GetRotationInverse();
+
+    Eigen::Vector3d GetTranslationInverse();
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

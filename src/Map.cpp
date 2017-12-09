@@ -195,6 +195,23 @@ void Map::RemoveFront(int FrameCount)
     }
 }
 
+int Map::GetMapPointCount()
+{
+    int cnt = 0;
+
+    for (auto &MapPoint : mlMapPoints)
+    {
+        MapPoint.mnUsedNum = MapPoint.mvFeaturePerFrame.size();
+
+        if (MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-2)
+        {
+            cnt++;
+        }
+    }
+
+    return cnt;
+}
+
 void Map::DebugShow()
 {
     LOG(INFO) << "the map debug: show the map point in the map" << endl;

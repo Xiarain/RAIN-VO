@@ -283,7 +283,6 @@ void Feature::RejectWithF(void)
         mat=mat.reshape(2);
         cv::undistortPoints(mat, mat, CmaeraK, DistCoef, cv::Mat(), CmaeraK);
         mat=mat.reshape(1);
-        cout << "after undistortion" << endl;
 
         for (int i = 0; i <vunPrePointsPts.size(); i++)
         {

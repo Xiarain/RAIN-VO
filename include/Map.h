@@ -88,6 +88,8 @@ public:
 
     void RemoveFront(int FrameCount);
 
+    int GetMapPointCount();
+
     void DebugShow();
 
     void Triangulate(array<Frame *, mnWindowSize+1> *paFramesWin);

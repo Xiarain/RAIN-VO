@@ -83,7 +83,7 @@ void Frame::DetectKeyPoint(const cv::Mat &image, const double &TimeStamps)
 
 }
 
-inline size_t Frame::GetFrameID()
+size_t Frame::GetFrameID()
 {
     unique_lock<mutex> lock(mMutexPose);
     return mID;
@@ -187,6 +187,18 @@ Eigen::Vector3d Frame::GetTranslation()
 {
     unique_lock<mutex> lock(mMutexPose);
     return mtcw;
+}
+
+Eigen::Matrix3d Frame::GetRotationInverse()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mRwc;
+}
+
+Eigen::Vector3d Frame::GetTranslationInverse()
+{
+    unique_lock<mutex> lock(mMutexPose);
+    return mtwc;
 }
 
 } // namespace RAIN_VIO

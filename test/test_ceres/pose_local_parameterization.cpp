@@ -62,6 +62,8 @@ bool ReprojectionErrorSE3::Evaluate(double const *const *parameters, double *res
         {
             Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor> > Jse3(jacobians[0]);
             Jse3.setZero();
+
+            // very important! the form of the se3 is the rotation in the front and the transformation in the back
             Jse3.block<2,3>(0,0) = -jacobian*skew(p);
             Jse3.block<2,3>(0,3) = jacobian;
         }

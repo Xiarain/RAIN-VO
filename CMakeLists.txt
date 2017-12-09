@@ -71,7 +71,7 @@ target_link_libraries(test_glog ${PROJECT_NAME})
 add_executable(test_pangolin test/test_pangolin.cpp)
 target_link_libraries(test_pangolin ${PROJECT_NAME})
 
-add_executable(test_pnp test/test_OpencvPnP.cpp)
+add_executable(test_pnp test/test_pnp/test_OpencvPnP.cpp)
 target_link_libraries(test_pnp ${PROJECT_NAME})
 
 
@@ -79,6 +79,8 @@ add_executable(test_BA
     test/test_ceres/test_BA.cpp
     test/test_ceres/pose_local_parameterization.cpp
     test/test_ceres/pose_local_parameterization.h
-        test/test_ceres/se3.h
-)
+    test/test_ceres/se3.h)
 target_link_libraries(test_BA ${PROJECT_NAME})
+
+add_executable(test_converter  test/test_src/test_converter.cpp)
+target_link_libraries(test_converter ${PROJECT_NAME})

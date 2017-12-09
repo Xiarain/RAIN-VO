@@ -93,6 +93,8 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
         eMarginflag = MARGINSECONDNEW;
 
+    mpMap->GetMapPointCount();
+
     if (etrackingState == NOINITIALIZED)
     {
         if (mnFrameCount == mnWindowSize)
@@ -109,17 +111,19 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     }
     else
     {
+//        Optimizer::ComputeReprojectionCost(8, maFramesWin.at(8) ,mpMap);
+
         TrackReferenceKeyFrame();
 
-        mpMap->Triangulate(&maFramesWin);
+//        mpMap->Triangulate(&maFramesWin);
+//
+        Optimizer::PoseOptimization(mnFrameCount, mpCurrentFrame ,mpMap);
 
-        Optimizer::PoseOptimization(8, maFramesWin.at(8) ,mpMap);
-
-        Optimizer::ComputeReprojectionCost(8, maFramesWin.at(8) ,mpMap);
+        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap);
 
 //        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
 
-        SlideWindow();
+         SlideWindow();
     }
 
     cv::waitKey(0);
@@ -250,7 +254,8 @@ bool Tracking::TrackReferenceKeyFrame()
     // TODO the MapPoint should build a reverse file
     for (auto &MapPoint : mpMap->mlMapPoints)
     {
-        MapPoint.mnUsedNum = (int) MapPoint.mvFeaturePerFrame.size();
+        MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
+
         if (!(MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize - 2))
             continue;
 
@@ -279,6 +284,7 @@ bool Tracking::TrackReferenceKeyFrame()
     LOG_IF(FATAL, vPoint3d.size() < 20) << " the number of feature is too littel: " << vPoint3d.size() << endl;;
 
     cv::Mat R, rvec, t, D, K;
+
     K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0,
                                    0, 1.0, 0,
                                    0, 0, 1.0);
@@ -293,12 +299,20 @@ bool Tracking::TrackReferenceKeyFrame()
 
     // from the camera to the world
     {
-        Eigen::MatrixXd Rwc;
-        cv::cv2eigen(R, Rwc);
-        Eigen::MatrixXd twc;
-        cv::cv2eigen(t,twc);
+        Eigen::Matrix3d Rwc;
+        Eigen::Vector3d twc;
+
+        Rwc = Converter::toMatrix3d(R);
+        twc = Converter::toVector3d(t);
+
+        Eigen::Matrix<double, 3, 4> Twc;
+        Twc.block<3, 3>(0, 0) = Rwc;
+        Twc.block<3, 1>(0, 3) = twc;
+
+        mpCurrentFrame->SetPoseInverse(Twc);
     }
 
+    return true;
 }
 
 void Tracking::SetViewer(Viewer *pViewer)

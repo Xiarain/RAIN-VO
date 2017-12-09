@@ -44,9 +44,9 @@ int main(int argc, char* argv[])
         cout << se3updated << endl;
     }
 
-    const string strimg1FilePath = "../test/test_pnp_material/1.png";
-    const string strimg2FilePath = "../test/test_pnp_material/2.png";
-    const string strimg1depthFilePath = "../test/test_pnp_material/1_depth.png";
+    const string strimg1FilePath = "../test/test_pnp/1.png";
+    const string strimg2FilePath = "../test/test_pnp/2.png";
+    const string strimg1depthFilePath = "../test/test_pnp/1_depth.png";
 
     cv::Mat img1 = cv::imread(strimg1FilePath, CV_LOAD_IMAGE_COLOR);
     if (img1.empty())

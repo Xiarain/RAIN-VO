@@ -74,9 +74,9 @@ Eigen::Matrix<double,3,3> Converter::toMatrix3d(const cv::Mat &cvMat3)
 {
     Eigen::Matrix<double,3,3> M;
 
-    M << cvMat3.at<float>(0,0), cvMat3.at<float>(0,1), cvMat3.at<float>(0,2),
-         cvMat3.at<float>(1,0), cvMat3.at<float>(1,1), cvMat3.at<float>(1,2),
-         cvMat3.at<float>(2,0), cvMat3.at<float>(2,1), cvMat3.at<float>(2,2);
+    M << cvMat3.at<double>(0,0), cvMat3.at<double>(0,1), cvMat3.at<double>(0,2),
+         cvMat3.at<double>(1,0), cvMat3.at<double>(1,1), cvMat3.at<double>(1,2),
+         cvMat3.at<double>(2,0), cvMat3.at<double>(2,1), cvMat3.at<double>(2,2);
 
     return M;
 }
@@ -138,7 +138,7 @@ Eigen::Vector3d Converter::toEuler(const Eigen::Quaterniond &q)
 
     roll = atan2(r1, r2);
     pitch = asin(r3);
-    yaw = atan2(r4,r5);
+    yaw = atan2(r4, r5);
 
     Eigen::Vector3d euler(yaw,pitch,roll);
 
