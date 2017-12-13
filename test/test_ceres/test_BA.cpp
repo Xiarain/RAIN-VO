@@ -10,7 +10,6 @@
 #include <opencv2/core/eigen.hpp>
 
 #include "pose_local_parameterization.h"
-#include "se3.h"
 
 using namespace std;
 
@@ -62,7 +61,7 @@ int main(int argc, char* argv[])
     FindFeatureMatches(img1, img2, vkeypoints1, vkeypoints2, vmatches);
 
     cv::Mat showImg;
-    cv::drawMatches(img2, vkeypoints2, img1, vkeypoints1, vmatches, showImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255));
+    cv::drawMatches(img1, vkeypoints1, img2, vkeypoints2, vmatches, showImg);
 
     cv::Mat K = (cv::Mat_<double> (3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
 

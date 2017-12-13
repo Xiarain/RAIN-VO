@@ -111,15 +111,15 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     }
     else
     {
-//        Optimizer::ComputeReprojectionCost(8, maFramesWin.at(8) ,mpMap);
 
-        TrackReferenceKeyFrame();
-
+//        TrackReferenceKeyFrame();
+//
 //        mpMap->Triangulate(&maFramesWin);
 //
-        Optimizer::PoseOptimization(mnFrameCount, mpCurrentFrame ,mpMap);
-
-        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap);
+//        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap);
+//        Optimizer::ComputeReprojectionCost(5, maFramesWin.at(5), mpMap);
+//
+//        Optimizer::PoseOptimization(mnFrameCount, mpCurrentFrame ,mpMap);
 
 //        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
 
@@ -133,7 +133,7 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 
     if (!mpCurrentFrame->mViwerShow.empty())
         mpViewer->UpdateFrame(this);
-}
+} // void Tracking::Track()
 
 void Tracking::SlideWindow()
 {
@@ -281,7 +281,7 @@ bool Tracking::TrackReferenceKeyFrame()
         vPoint3d.emplace_back(Converter::toCvPoint3f(MapPoint.mPoint3d));
     }
 
-    LOG_IF(FATAL, vPoint3d.size() < 20) << " the number of feature is too littel: " << vPoint3d.size() << endl;;
+    LOG_IF(ERROR, vPoint3d.size() < 20) << " the number of feature is too littel: " << vPoint3d.size() << endl;;
 
     cv::Mat R, rvec, t, D, K;
 
@@ -311,6 +311,9 @@ bool Tracking::TrackReferenceKeyFrame()
 
         mpCurrentFrame->SetPoseInverse(Twc);
     }
+
+    cout << mpCurrentFrame->GetTranslation().transpose() << endl;
+    cout << Converter::toEuler(mpCurrentFrame->GetRotation()).transpose() << endl;
 
     return true;
 }

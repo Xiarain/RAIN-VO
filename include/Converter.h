@@ -27,13 +27,14 @@ public:
     static Eigen::Matrix<double, 3, 1> toVector3d(const cv::Point3f &cvPoint);
     static Eigen::Matrix<double, 3, 3> toMatrix3d(const cv::Mat &cvMat3);
 
-    static std::vector<float> toQuaternion(const cv::Mat &m);
+    static std::vector<double> toQuaternion(const cv::Mat &m);
 
     static Eigen::Matrix<double, 2, 1> toVector2d(const cv::Point2f &cvPoint);
     static cv::Point2f toCvPoint2f(const Eigen::Vector2d &v);
     static cv::Point3f toCvPoint3f(const Eigen::Vector3d &v);
 
     static Eigen::Vector3d toEuler(const Eigen::Quaterniond &q);
+    static Eigen::Vector3d toEuler(const Eigen::Matrix3d &R);
 
 }; // class Converter
 

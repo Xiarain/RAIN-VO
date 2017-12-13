@@ -39,6 +39,10 @@ Camera::Camera(const string &strSettingsFile)
     mFeatureShow = fsSettings["Viewer.FeatureShow"];
 }
 
+Camera::Camera()
+{
+}
+
 /**
  * @brief dist
  * @param p the point of the normalized coordinate

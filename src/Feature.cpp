@@ -36,16 +36,16 @@ Feature::Feature(Camera *pCamera, const string &strSettingsFile, const int nWind
     mpCamera = pCamera;
 
     CmaeraK = cv::Mat::eye(3, 3, CV_32F);
-    CmaeraK.at<float>(0, 0) = (float)mpCamera->mfx;
-    CmaeraK.at<float>(1, 1) = (float)mpCamera->mfy;
-    CmaeraK.at<float>(0, 2) = (float)mpCamera->mcx;
-    CmaeraK.at<float>(1, 2) = (float)mpCamera->mcy;
+    CmaeraK.at<float>(0, 0) = (float)mpCamera->Getfx();
+    CmaeraK.at<float>(1, 1) = (float)mpCamera->Getfy();
+    CmaeraK.at<float>(0, 2) = (float)mpCamera->Getcx();
+    CmaeraK.at<float>(1, 2) = (float)mpCamera->Getcy();
 
     DistCoef = cv::Mat::zeros(4, 1, CV_32F);
-    DistCoef.at<float>(0) = (float)mpCamera->mk1;
-    DistCoef.at<float>(1) = (float)mpCamera->mk2;
-    DistCoef.at<float>(2) = (float)mpCamera->mp1;
-    DistCoef.at<float>(3) = (float)mpCamera->mp2;
+    DistCoef.at<float>(0) = (float)mpCamera->GetDistortionPara()[0];
+    DistCoef.at<float>(1) = (float)mpCamera->GetDistortionPara()[1];
+    DistCoef.at<float>(2) = (float)mpCamera->GetDistortionPara()[2];
+    DistCoef.at<float>(3) = (float)mpCamera->GetDistortionPara()[3];
 
     ImageHeight = mpCamera->mImageHeight;
     ImageWidth = mpCamera->mImageWidth;
@@ -212,7 +212,7 @@ void Feature::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
     detector->detect(image, mvKeyPoints, mMask);
 #endif
 
-    const int CellSize = minDist+30;
+    const int CellSize = minDist+10;
     int GridnCols = ceil(static_cast<int>(ImageWidth / CellSize));
     int GridnRows = ceil(static_cast<int>(ImageHeight / CellSize));
 
@@ -240,6 +240,7 @@ void Feature::DetectKeyPoint(const cv::Mat &image, const int numFeatureNeeds)
             }
         }
     }
+
     mvKeyPoints.resize(i);
 
     for (auto &KeyPoints : mvKeyPoints)

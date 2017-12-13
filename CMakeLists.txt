@@ -60,12 +60,11 @@ target_link_libraries(${PROJECT_NAME}
 add_executable(mono_euroc
     Example/mono_euroc.cpp
 )
-
 target_link_libraries(mono_euroc
     ${PROJECT_NAME}
 )
 
-add_executable(test_glog test/test_glog.cpp )
+add_executable(test_glog test/test_glog.cpp)
 target_link_libraries(test_glog ${PROJECT_NAME})
 
 add_executable(test_pangolin test/test_pangolin.cpp)
@@ -84,3 +83,9 @@ target_link_libraries(test_BA ${PROJECT_NAME})
 
 add_executable(test_converter  test/test_src/test_converter.cpp)
 target_link_libraries(test_converter ${PROJECT_NAME})
+
+add_executable(test_triangulation test/test_triangulation.cpp)
+target_link_libraries(test_triangulation ${PROJECT_NAME})
+
+add_executable(test_feature test/test_feature.cpp)
+target_link_libraries(test_feature ${PROJECT_NAME})

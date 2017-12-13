@@ -3,6 +3,7 @@
 //
 
 #include "Converter.h"
+#include <glog/logging.h>
 
 namespace RAIN_VIO
 {
@@ -57,7 +58,7 @@ cv::Mat Converter::toCvSE3(const Eigen::Matrix<double, 3, 3> &R, const Eigen::Ma
 Eigen::Matrix<double,3,1> Converter::toVector3d(const cv::Mat &cvVector)
 {
     Eigen::Matrix<double,3,1> v;
-    v << cvVector.at<float>(0), cvVector.at<float>(1), cvVector.at<float>(2);
+    v << cvVector.at<double>(0), cvVector.at<double>(1), cvVector.at<double>(2);
 
     return v;
 }
@@ -81,16 +82,16 @@ Eigen::Matrix<double,3,3> Converter::toMatrix3d(const cv::Mat &cvMat3)
     return M;
 }
 
-std::vector<float> Converter::toQuaternion(const cv::Mat &M)
+std::vector<double> Converter::toQuaternion(const cv::Mat &m)
 {
-    Eigen::Matrix<double,3,3> eigMat = toMatrix3d(M);
+    Eigen::Matrix<double,3,3> eigMat = toMatrix3d(m);
     Eigen::Quaterniond q(eigMat);
 
-    std::vector<float> v(4);
-    v[0] = (float)q.x();
-    v[1] = (float)q.y();
-    v[2] = (float)q.z();
-    v[3] = (float)q.w();
+    std::vector<double> v(4);
+    v[0] = q.x();
+    v[1] = q.y();
+    v[2] = q.z();
+    v[3] = q.w();
 
     return v;
 }
@@ -139,6 +140,22 @@ Eigen::Vector3d Converter::toEuler(const Eigen::Quaterniond &q)
     roll = atan2(r1, r2);
     pitch = asin(r3);
     yaw = atan2(r4, r5);
+
+    Eigen::Vector3d euler(yaw,pitch,roll);
+
+    return euler;
+}
+
+Eigen::Vector3d Converter::toEuler(const Eigen::Matrix3d &R)
+{
+    double yaw, pitch, roll;
+
+    CHECK(R(0,0) == 0) << "converter matrix to euler is wrong " << std::endl;
+    CHECK(R(2,2) == 0) << "converter matrix to euler is wrong " << std::endl;
+
+    roll = atan2(R(2,1), R(2,2));
+    pitch = asin(-R(2, 0));
+    yaw = atan2(R(1,0), R(0,0));
 
     Eigen::Vector3d euler(yaw,pitch,roll);
 

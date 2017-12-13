@@ -80,7 +80,7 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
         if (!(MapPoint.mdEstimatedDepth > 0))
             continue;
 
-        if ((MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame < IdxWin && MapPoint.EndFrame() > IdxWin))
+        if ((MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame < IdxWin && MapPoint.EndFrame() >= IdxWin))
         {
             FeaturePerFrame featurePerFrame = MapPoint.mvFeaturePerFrame.at((size_t)(IdxWin-MapPoint.mnStartFrame));
 
@@ -111,7 +111,7 @@ void Optimizer::PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap)
 
 void Optimizer::ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap)
 {
-      double cost=0;
+    double cost=0;
     vector<Eigen::Vector2d> vresiduals;
 
     vresiduals.resize(pFrame->mvFraPointsPts.size());

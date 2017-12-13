@@ -6,6 +6,8 @@
 
 using namespace RAIN_VIO;
 
+using namespace std;
+
 int main(int argv, char* argc[])
 {
 
@@ -21,7 +23,28 @@ int main(int argv, char* argc[])
 
     eigenmat = Converter::toMatrix3d(cvmat);
 
-    std::cout << eigenmat << std::endl;
+    cout << "eigen rotation matrix: " << endl;
+    cout << eigenmat << endl;
+
+    cout << "converter eigen rotation matrix to euler: "<< endl;
+    cout << Converter::toEuler(eigenmat).transpose() << endl;
+
+    cout << "converter quaternion to euler: "<< endl;
+    cout << Converter::toEuler(Eigen::Quaterniond(eigenmat)).transpose() << endl;
+
+    Eigen::Vector3d t(1.0, 0., 2.0);
+
+    Eigen::Quaterniond Rq(eigenmat);
+
+    cout << "quaternion: " << endl;
+    cout << Rq.coeffs().transpose() << endl;
+
+    cout << "quaternion rotate the vector: "<< endl;
+    Eigen::Vector3d t2 = Rq * t;
+    cout << t2.transpose() << endl;
+
+    cout << "quaternion to rotation matrix and rotate the vector: "<< endl;
+    cout << (Rq.toRotationMatrix()*t).transpose() << endl;
 
     return 0;
 }

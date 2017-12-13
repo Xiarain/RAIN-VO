@@ -89,7 +89,7 @@ int main(int argc, char** argv)
     FindFeatureMatches(img1, img2, vkeypoints1, vkeypoints2, vmatches);
 
     cv::Mat showImg;
-    cv::drawMatches(img2, vkeypoints2, img1, vkeypoints1, vmatches, showImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255));
+    cv::drawMatches(img1, vkeypoints1, img2, vkeypoints2, vmatches, showImg);
 
     cout << "the matches between the two images " << vmatches.size() << endl;
 
@@ -107,10 +107,10 @@ int main(int argc, char** argv)
         if (d == 0)
             continue;
 
-        float dd = d/1000.0;
+        double dd = d/1000.0;
         cv::Point2d p1 = pixel2cam(vkeypoints1[m.queryIdx].pt, K);
-        vpts3d.push_back(cv::Point3d(p1.x*dd, p1.y*dd, dd));
-        vpts2d.push_back(vkeypoints2[m.trainIdx].pt);
+        vpts3d.emplace_back(cv::Point3d(p1.x*dd, p1.y*dd, dd));
+        vpts2d.emplace_back(vkeypoints2[m.trainIdx].pt);
     }
 
     cout << "3d-2d pairs: " << vpts3d.size() << endl;

@@ -266,8 +266,8 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
             Eigen::Vector3d tc1c0 = Rc0w.transpose()*(tc1w - tc0w);
 
             Eigen::Matrix<double, 3, 4> Tc1c0;
-            Tc1c0.block<3, 3>(0, 0) = Rc1c0;
-            Tc1c0.block<3, 1>(0, 3) = tc1c0;
+            Tc1c0.block<3, 3>(0, 0) = Rc1c0.transpose();
+            Tc1c0.block<3, 1>(0, 3) = -Rc1c0.transpose()*tc1c0;
 
             Eigen::Vector3d Point2d = itFeaturePerFrame.Point.normalized();
             SVDA.row(SVDIdx++) = Point2d[0]*Tc1c0.row(2) - Point2d[2]*Tc1c0.row(0);
