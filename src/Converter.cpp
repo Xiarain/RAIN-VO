@@ -10,46 +10,46 @@ namespace RAIN_VIO
 
 cv::Mat Converter::toCvMat(const Eigen::Matrix<double,4,4> &m)
 {
-    cv::Mat cvMat(4,4,CV_32F);
+    cv::Mat cvMat(4,4,CV_64F);
     for(int i=0;i<4;i++)
         for(int j=0; j<4; j++)
-            cvMat.at<float>(i,j) = (float)m(i,j);
+            cvMat.at<double>(i,j) = (double)m(i,j);
 
     return cvMat.clone();
 }
 
 cv::Mat Converter::toCvMat(const Eigen::Matrix<double, 3, 3> &m)
 {
-    cv::Mat cvMat(3,3,CV_32F);
+    cv::Mat cvMat(3,3,CV_64F);
     for(int i=0;i<3;i++)
         for(int j=0; j<3; j++)
-            cvMat.at<float>(i,j) = (float)m(i,j);
+            cvMat.at<double>(i,j) = (double)m(i,j);
 
     return cvMat.clone();
 }
 
 cv::Mat Converter::toCvMat(const Eigen::Matrix<double, 3, 1> &m)
 {
-    cv::Mat cvMat(3,1,CV_32F);
+    cv::Mat cvMat(3,1,CV_64F);
     for(int i=0;i<3;i++)
-        cvMat.at<float>(i) = (float)m(i);
+        cvMat.at<double>(i) = (double)m(i);
 
     return cvMat.clone();
 }
 
 cv::Mat Converter::toCvSE3(const Eigen::Matrix<double, 3, 3> &R, const Eigen::Matrix<double, 3, 1> &t)
 {
-    cv::Mat cvMat = cv::Mat::eye(4,4,CV_32F);
+    cv::Mat cvMat = cv::Mat::eye(4,4,CV_64F);
     for(int i=0;i<3;i++)
     {
         for(int j=0;j<3;j++)
         {
-            cvMat.at<float>(i,j) = (float)R(i,j);
+            cvMat.at<double>(i,j) = (double)R(i,j);
         }
     }
     for(int i=0;i<3;i++)
     {
-        cvMat.at<float>(i,3) = (float)t(i);
+        cvMat.at<double>(i,3) = (double)t(i);
     }
 
     return cvMat.clone();
@@ -150,8 +150,8 @@ Eigen::Vector3d Converter::toEuler(const Eigen::Matrix3d &R)
 {
     double yaw, pitch, roll;
 
-    CHECK(R(0,0) == 0) << "converter matrix to euler is wrong " << std::endl;
-    CHECK(R(2,2) == 0) << "converter matrix to euler is wrong " << std::endl;
+    CHECK(R(0,0) != 0) << "converter matrix to euler is wrong " << std::endl;
+    CHECK(R(2,2) != 0) << "converter matrix to euler is wrong " << std::endl;
 
     roll = atan2(R(2,1), R(2,2));
     pitch = asin(-R(2, 0));

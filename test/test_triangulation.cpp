@@ -91,6 +91,7 @@ int main(int argc, char** argv)
     // the depth information comes from the first image
     cv::solvePnP(vpts3d, vpts2d, K, cv::Mat(), r, t, false);
 
+    // from the camera to the world, also means from the frame 2 to the frame 1
     cv::Mat R;
     cv::Rodrigues(r, R);
 
@@ -98,27 +99,18 @@ int main(int argc, char** argv)
     cout << "t " << t << endl;
 
     vector<cv::Point3d> vpoints;
-    Triangulation(vkeypoints1, vkeypoints2, vmatches, R, t, K, vpoints);
-
     vector<Eigen::Vector3d> point3dw1;
     vector<Eigen::Vector3d> point3dw2;
+    vector<cv::DMatch> vtrianmatches;
 
     {
-
         Eigen::Matrix3d R12;
-        Eigen::Matrix3d R21;
         Eigen::Vector3d t12;
-        Eigen::Vector3d t21;
         Eigen::Vector3d Pointc;
 
+        // from the frame 2 to the fram 1
         R12 = RAIN_VIO::Converter::toMatrix3d(R);
         t12 = RAIN_VIO::Converter::toVector3d(t);
-
-        R21 = R12.transpose();
-        t21 = -R12.transpose()*t12;
-
-        Eigen::Quaterniond R1;
-        R1.setIdentity();
 
         for (auto m:vmatches)
         {
@@ -132,21 +124,22 @@ int main(int argc, char** argv)
 
             double dd1 = d1/1000.0;
             point3dw1.emplace_back(camera.Pixwl2World(RAIN_VIO::Converter::toVector2d(vkeypoints1[m.queryIdx].pt),
-                                                      R1, Eigen::Vector3d(0, 0, 0), dd1));
-
+                                                      Eigen::Quaterniond(1, 0, 0, 0), Eigen::Vector3d(0, 0, 0), dd1));
             double dd2 = d2/1000.0;
             point3dw2.emplace_back(camera.Pixwl2World(RAIN_VIO::Converter::toVector2d(vkeypoints2[m.trainIdx].pt), Eigen::Quaterniond(R12), t12, dd2));
+
+            vtrianmatches.emplace_back(m);
         }
 
     }
 
-
+    Triangulation(vkeypoints1, vkeypoints2, vtrianmatches, R, t, K, vpoints);
 
     for (int i = 0; i < point3dw2.size(); i++)
     {
         cout << "~" << point3dw1[i].transpose() << endl;
         cout << " " << point3dw2[i].transpose() << endl;
-//        cout << " " << vpoints[i] << endl;
+        cout << " " << vpoints[i] << endl;
     }
 
     cv::imshow(" ", showImg);
@@ -214,16 +207,6 @@ void Triangulation(const vector<cv::KeyPoint> &vkeypoint1, const vector<cv::KeyP
                    const vector<cv::DMatch> &vmatches, const cv::Mat &R, const cv::Mat &t,
                    cv::Mat K, vector<cv::Point3d> &vpoints)
 {
-    cv::Mat T0;
-    T0 = (cv::Mat_<double> (3, 4) <<  1., 0., 0., 0.,
-                                      0., 1., 0., 0.,
-                                      0., 0., 1., 0.,
-                                      0., 0., 0., 1.);
-
-    cv::Mat T1;
-    T1 = (cv::Mat_<float> (3,4) << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
-                                   R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
-                                   R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0));
     vector<cv::Point2d> vpts0, vpts1;
 
     for (cv::DMatch match : vmatches)
@@ -233,6 +216,90 @@ void Triangulation(const vector<cv::KeyPoint> &vkeypoint1, const vector<cv::KeyP
     }
 
     cv::Mat pts4d;
+
+#if 1
+
+    // from the frame 1 to the frame 0
+    Eigen::Matrix<double, 3, 4> T00;
+    T00.block<3, 3>(0, 0).setIdentity();
+    T00.block<3, 1>(0, 3).setZero();
+
+    Eigen::Matrix<double, 3, 4> T01;
+    T01 << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
+           R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
+           R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0);
+
+    for (size_t i = 0; i < vpts0.size(); i++)
+    {
+        Eigen::Matrix<double, 4, 4> SVDA;
+
+        SVDA.row(0) = vpts0[i].x*T00.row(2) - T00.row(0);
+        SVDA.row(1) = vpts0[i].y*T00.row(2) - T00.row(1);
+        SVDA.row(2) = vpts1[i].x*T01.row(2) - T01.row(0);
+        SVDA.row(3) = vpts1[i].y*T01.row(2) - T01.row(1);
+
+        Eigen::Vector4d SVDV = Eigen::JacobiSVD<Eigen::MatrixXd>(SVDA, Eigen::ComputeThinV).matrixV().rightCols<1>();
+
+        SVDV = SVDV/SVDV[3];
+
+        vpoints.emplace_back(cv::Point3d(SVDV[0], SVDV[1], SVDV[2]));
+    }
+
+#elif 0
+
+    cv::Mat T0;
+    T0 = (cv::Mat_<double> (3, 4) <<  1., 0., 0., 0.,
+            0., 1., 0., 0.,
+            0., 0., 1., 0.,
+            0., 0., 0., 1.);
+
+    // it mean from the frame 1 to frame 0
+    cv::Mat T1;
+    T1 = (cv::Mat_<double> (3,4) << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
+            R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
+            R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0));
+
+
+    for (size_t i = 0; i < vpts0.size(); i++)
+    {
+
+
+        cv::Mat A(4,4,CV_64F);
+        A.row(0) = vpts0[i].x*T0.row(2)-T0.row(0);
+        A.row(1) = vpts0[i].y*T0.row(2)-T0.row(1);
+        A.row(2) = vpts1[i].x*T1.row(2)-T1.row(0);
+        A.row(3) = vpts1[i].y*T1.row(2)-T1.row(1);
+
+        //A = WUV_t X是V的最后一列
+        cv::Mat w,u,vt;
+        cv::SVD::compute(A,w,u,vt,cv::SVD::MODIFY_A| cv::SVD::FULL_UV);
+
+        // 三角化恢复的3D点
+        cv::Mat x3D;
+        x3D = vt.row(3).t();
+
+        if(x3D.at<double>(3)==0)
+            continue;
+
+        // Euclidean coordinates
+        x3D = x3D.rowRange(0,3)/x3D.at<double>(3);
+
+        vpoints.emplace_back(cv::Point3d(x3D.at<double>(0), x3D.at<double>(1), x3D.at<double>(2)));
+    }
+
+#else
+
+    cv::Mat T0;
+    T0 = (cv::Mat_<double> (3, 4) <<  1., 0., 0., 0.,
+                                      0., 1., 0., 0.,
+                                      0., 0., 1., 0.,
+                                      0., 0., 0., 1.);
+
+    // it mean from the frame 1 to frame 0
+    cv::Mat T1;
+    T1 = (cv::Mat_<float> (3,4) << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
+                                   R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
+                                   R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0));
 
     cv::triangulatePoints(T0, T1, vpts0, vpts1, pts4d);
 
@@ -244,6 +311,9 @@ void Triangulation(const vector<cv::KeyPoint> &vkeypoint1, const vector<cv::KeyP
 
         vpoints.push_back(p);
     }
+
+#endif
+
 
 }
 

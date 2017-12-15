@@ -4,8 +4,6 @@
 
 #include "Converter.h"
 
-using namespace RAIN_VIO;
-
 using namespace std;
 
 int main(int argv, char* argc[])
@@ -21,16 +19,16 @@ int main(int argv, char* argc[])
 
     cv::Rodrigues(r, cvmat);
 
-    eigenmat = Converter::toMatrix3d(cvmat);
+    eigenmat = RAIN_VIO::Converter::toMatrix3d(cvmat);
 
     cout << "eigen rotation matrix: " << endl;
     cout << eigenmat << endl;
 
     cout << "converter eigen rotation matrix to euler: "<< endl;
-    cout << Converter::toEuler(eigenmat).transpose() << endl;
+    cout << RAIN_VIO::Converter::toEuler(eigenmat).transpose() << endl;
 
     cout << "converter quaternion to euler: "<< endl;
-    cout << Converter::toEuler(Eigen::Quaterniond(eigenmat)).transpose() << endl;
+    cout << RAIN_VIO::Converter::toEuler(Eigen::Quaterniond(eigenmat)).transpose() << endl;
 
     Eigen::Vector3d t(1.0, 0., 2.0);
 
