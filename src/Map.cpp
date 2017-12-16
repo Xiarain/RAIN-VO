@@ -23,7 +23,7 @@ Map::Map()
  * @param Feature const vector<pair<int, Eigen::Vector3d>>, make up with the ID and keypoint
  * @return if the frame is the keyframe, return true
  */
-bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features)
+bool Map::AddFeatureCheckParallax(Frame *pFrame, const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features)
 {
     mLastTrackNum = 0;
     double ParallaxSum = 0;
@@ -42,18 +42,28 @@ bool Map::AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, 
         // this MapPoint is not in the list and add the MapPoint to the list
         if (it == mlMapPoints.end())
         {
+            MapPoint mapPoint_(featureID, FrameCount);
             // FrameCount is the start frame of this mappoint
-            mlMapPoints.emplace_back(MapPoint(featureID, FrameCount));
+            mlMapPoints.emplace_back(mapPoint_);
+
+            featurePerFrame.SetMapPoint(&mapPoint_);
+
             mlMapPoints.back().mvFeaturePerFrame.push_back(featurePerFrame);
         }
         else if (it->mnFeatureID == featureID)
         {
+
+            featurePerFrame.SetMapPoint(&(*it));
+
             it->mvFeaturePerFrame.push_back(featurePerFrame);
 
             // the number of the point from the last frame has been tracked by this frame
             mLastTrackNum++;
             // cout << "the ID: " << it->mnFeatureID << " the cnt: " <<  it->mvFeaturePerFrame.size() << endl;
         }
+
+        pFrame->mvFeaturePerFrame.emplace_back(featurePerFrame);
+
     } // for (auto Feature : Features)
 
     // TODO add the feature point to the Map and the compute the parallax should be separated, and whether the frame is the keyframe should add some other requirments

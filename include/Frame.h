@@ -6,6 +6,7 @@
 #define RAIN_VIO_FRAME_H
 
 #include "Feature.h"
+#include "Map.h"
 #include <iostream>
 #include <vector>
 
@@ -16,6 +17,7 @@ namespace RAIN_VIO
 
 class Feature;
 class Camera;
+class FeaturePerFrame;
 
 class Frame
 {
@@ -27,11 +29,12 @@ public:
 
     int mnWindowSize;
     cv::Mat mImageShow;
+    cv::Mat mViwerShow;
     vector<pair<uint, Eigen::Vector3d> > mvFraFeatures; // ID and point vector<pair<int, Eigen::Vector3d>>
+    vector<FeaturePerFrame> mvFeaturePerFrame;
     vector<cv::Point2f> mvFraPointsPts;
     vector<uint> mvFraPointsID;
     vector<int> mvFraPointsCnt;
-    cv::Mat mViwerShow;
 
     Frame();
     Frame(Camera *pCamera, Feature *pfeature, const string &strSettingsFile, const int nWindowSize);

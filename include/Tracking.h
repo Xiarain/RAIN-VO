@@ -34,7 +34,7 @@ class GlobalSFM;
 class Initializer;
 class Viewer;
 class MapDrawer;
-
+class FeaturePerFrame;
 
 enum eTrackingState
 {
@@ -90,6 +90,8 @@ public:
     bool InitialStructure();
 
     bool TrackReferenceKeyFrame();
+
+    bool TrackReferenceKeyFrame2();
 
     void SetViewer(Viewer *pViewer);
 

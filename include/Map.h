@@ -23,21 +23,23 @@ namespace RAIN_VIO
 
 class Frame;
 class KeyFrame;
+class MapPoint;
 // 2D feature point in the per frame
 class FeaturePerFrame
 {
 
 public:
-    FeaturePerFrame(const Eigen::Vector3d &_point)
-    {
-        z = _point(2);
-        Point = _point/z;
-    }
-    Eigen::Vector3d Point;
+
     double z;
     double Parallax;
+    Eigen::Vector3d Point;
     Eigen::MatrixXd A;
     Eigen::MatrixXd b;
+    MapPoint *mpInvertMapPoint;
+
+    FeaturePerFrame(const Eigen::Vector3d &_point) {z = _point(2); Point = _point/z;}
+
+    void SetMapPoint(MapPoint *pMapPoint) { mpInvertMapPoint = pMapPoint;}
 
 }; // class FeaturePerFrame
 
@@ -47,19 +49,17 @@ class MapPoint
 public:
     int mnFeatureID;
     int mnStartFrame;
-    vector<FeaturePerFrame> mvFeaturePerFrame;
     int mnUsedNum;
     bool bisOutlier;
     double mdEstimatedDepth;
     int mnFlag;
 
     Eigen::Vector3d mPoint3d;
+    vector<FeaturePerFrame> mvFeaturePerFrame;
 
     MapPoint(int _FeatureID, int _StartFrame)
             : mnFeatureID(_FeatureID), mnStartFrame(_StartFrame),
-              mnUsedNum(0), mdEstimatedDepth(-1.0), mnFlag(0)
-    {
-    }
+              mnUsedNum(0), mdEstimatedDepth(-1.0), mnFlag(0) {}
 
     int EndFrame();
 
@@ -78,7 +78,7 @@ public:
 
     Map();
 
-    bool AddFeatureCheckParallax(const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
+    bool AddFeatureCheckParallax(Frame *pFrame, const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
 
     double ComputeParallax(const MapPoint &mapPoint, int FrameCount);
 

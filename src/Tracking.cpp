@@ -85,7 +85,7 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     maFramesWin.at(mnFrameCount) = mpCurrentFrame;
 
     // whether keyframe or not
-    if (mpMap->AddFeatureCheckParallax(mnFrameCount, mpCurrentFrame->mvFraFeatures))
+    if (mpMap->AddFeatureCheckParallax(mpCurrentFrame, mnFrameCount, mpCurrentFrame->mvFraFeatures))
     {
         // this is a keyframe
         eMarginflag = MARGINOLD;
@@ -112,13 +112,14 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
     {
 
-//        TrackReferenceKeyFrame();
+        TrackReferenceKeyFrame();
+        TrackReferenceKeyFrame2();
 //
 //        mpMap->Triangulate(&maFramesWin);
 //
 //        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap);
 //        Optimizer::ComputeReprojectionCost(5, maFramesWin.at(5), mpMap);
-//
+
 //        Optimizer::PoseOptimization(mnFrameCount, mpCurrentFrame ,mpMap);
 
 //        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
@@ -288,6 +289,64 @@ bool Tracking::TrackReferenceKeyFrame()
     K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0,
                                    0, 1.0, 0,
                                    0, 0, 1.0);
+
+    if (!cv::solvePnP(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false))
+    {
+        LOG(ERROR) << " failed in solving the PnP problem " << endl;
+        return false;
+    }
+
+    cv::Rodrigues(rvec, R);
+
+    // from the camera to the world
+    {
+        Eigen::Matrix3d Rwc;
+        Eigen::Vector3d twc;
+
+        Rwc = Converter::toMatrix3d(R);
+        twc = Converter::toVector3d(t);
+
+        Eigen::Matrix<double, 3, 4> Twc;
+        Twc.block<3, 3>(0, 0) = Rwc;
+        Twc.block<3, 1>(0, 3) = twc;
+
+        mpCurrentFrame->SetPoseInverse(Twc);
+    }
+
+    cout << mpCurrentFrame->GetTranslation().transpose() << endl;
+    cout << Converter::toEuler(mpCurrentFrame->GetRotation()).transpose() << endl;
+
+    return true;
+}
+
+bool Tracking::TrackReferenceKeyFrame2()
+{
+    vector<cv::Point2f> vPoint2d;
+    vector<cv::Point3f> vPoint3d;
+
+    vector<FeaturePerFrame> vFeaturePerFrame;
+
+    vFeaturePerFrame.assign(mpCurrentFrame->mvFeaturePerFrame.begin(), mpCurrentFrame->mvFeaturePerFrame.end());
+
+    for (auto &featurePerFrame:vFeaturePerFrame)
+    {
+        if (featurePerFrame.mpInvertMapPoint->mnUsedNum <= 2)
+            continue;
+
+        if (featurePerFrame.mpInvertMapPoint->mdEstimatedDepth <= 0)
+            continue;
+
+        vPoint2d.emplace_back(cv::Point2f((float)featurePerFrame.Point[0], (float)featurePerFrame.Point[1]));
+        vPoint3d.emplace_back(Converter::toCvPoint3f(featurePerFrame.mpInvertMapPoint->mPoint3d));
+    }
+
+    LOG_IF(ERROR, vPoint3d.size() < 20) << " the number of feature is too littel: " << vPoint3d.size() << endl;;
+
+    cv::Mat R, rvec, t, D, K;
+
+    K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0,
+            0, 1.0, 0,
+            0, 0, 1.0);
 
     if (!cv::solvePnP(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false))
     {
