@@ -29,7 +29,7 @@ bool Map::AddFeatureCheckParallax(Frame *pFrame, const int FrameCount, const vec
     double ParallaxSum = 0;
     int ParallaxNum = 0;
 
-    for (auto Feature : Features)
+    for (auto &Feature : Features)
     {
         FeaturePerFrame featurePerFrame(Feature.second); // the feature's position in the image
         uint featureID = Feature.first; // the ID comes from the feature point detection
@@ -52,7 +52,6 @@ bool Map::AddFeatureCheckParallax(Frame *pFrame, const int FrameCount, const vec
         }
         else if (it->mnFeatureID == featureID)
         {
-
             featurePerFrame.SetMapPoint(&(*it));
 
             it->mvFeaturePerFrame.push_back(featurePerFrame);
@@ -224,12 +223,21 @@ int Map::GetMapPointCount()
 
 void Map::DebugShow()
 {
-    LOG(INFO) << "the map debug: show the map point in the map" << endl;
-    LOG(INFO) << "the size of the map points " << static_cast<int>(mlMapPoints.size()) << endl;
-    LOG(INFO) << "the ID: the number of the used: the start frame" << endl;
+    LOG(WARNING) << "the map debug: show the map point in the map" << endl;
+    LOG(WARNING) << "the size of the map points " << static_cast<int>(mlMapPoints.size()) << endl;
+    LOG(WARNING) << "the ID: the number of the used: the start frame" << endl;
+
     for (auto point : mlMapPoints)
     {
-        LOG(INFO) <<  point.mnFeatureID << " " << static_cast<int>(point.mvFeaturePerFrame.size()) << " " << point.mnStartFrame << endl;
+        LOG(WARNING) << point.mnFeatureID << " " << static_cast<int>(point.mvFeaturePerFrame.size()) << " "
+                  << point.mnStartFrame << endl;
+
+        LOG(WARNING) << "!" << point.mPoint3d.transpose() << endl;
+
+        for (auto &featurePerFrame : point.mvFeaturePerFrame)
+        {
+            LOG(WARNING) << "~" << mpCamera->Camera2Pixel(featurePerFrame.Point).transpose() << endl;
+        }
     }
 }
 
@@ -255,8 +263,8 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
 
         Eigen::MatrixXd SVDA(2*MapPoint.mvFeaturePerFrame.size(), 4);
 
-        Eigen::Matrix3d Rc0w = paFramesWin->at((size_t)Frame0num)->GetRotation();
-        Eigen::Vector3d tc0w = paFramesWin->at((size_t)Frame0num)->GetTranslation();
+        Eigen::Matrix3d Rc0w = paFramesWin->at((size_t)Frame0num)->GetRotationInverse();
+        Eigen::Vector3d tc0w = paFramesWin->at((size_t)Frame0num)->GetTranslationInverse();
 
         LOG_IF(WARNING, tc0w[0] == 0 & tc0w[1] == 0 & tc0w[2] == 0) << "the Pose0 of the camera is wrong" << endl;
 
@@ -267,8 +275,8 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
         {
             Frame1num++;
 
-            Eigen::Matrix3d Rc1w = paFramesWin->at((size_t)Frame1num)->GetRotation();
-            Eigen::Vector3d tc1w = paFramesWin->at((size_t)Frame1num)->GetTranslation();
+            Eigen::Matrix3d Rc1w = paFramesWin->at((size_t)Frame1num)->GetRotationInverse();
+            Eigen::Vector3d tc1w = paFramesWin->at((size_t)Frame1num)->GetTranslationInverse();
 
             LOG_IF(WARNING, tc1w[0] == 0 & tc1w[1] == 0 & tc1w[2] == 0) << "the Pose1 of the camera is wrong"<< endl;
 
@@ -302,8 +310,51 @@ void Map::Triangulate(array<Frame *, (gWindowSize+1)> *paFramesWin)
             MapPoint.mdEstimatedDepth = 5.0;
         }
 
-        MapPoint.mPoint3d = MapPoint.mdEstimatedDepth*MapPoint.mvFeaturePerFrame[Frame0num].Point;
+        MapPoint.mPoint3d = MapPoint.mdEstimatedDepth*MapPoint.mvFeaturePerFrame[0].Point;
     } // for (auto &MapPoint : mlMapPoints)
+}
+
+void Map::Triangulate2(Frame *pCurrentFrame, array<Frame *, gWindowSize+1> *paFramesWin)
+{
+
+//    pCurrentFrame;
+//
+//    vector<cv::Point2d> vpts0, vpts1;
+//
+//    for (cv::DMatch match : vmatches)
+//    {
+//        vpts0.push_back(pixel2cam(vkeypoint1[match.queryIdx].pt, K));
+//        vpts1.push_back(pixel2cam(vkeypoint2[match.trainIdx].pt, K));
+//    }
+//
+//    cv::Mat pts4d;
+//
+//
+//    // from the frame 1 to the frame 0
+//    Eigen::Matrix<double, 3, 4> T00;
+//    T00.block<3, 3>(0, 0).setIdentity();
+//    T00.block<3, 1>(0, 3).setZero();
+//
+//    Eigen::Matrix<double, 3, 4> T01;
+//    T01 << R.at<double>(0,0), R.at<double>(0,1), R.at<double>(0,2), t.at<double>(0,0),
+//            R.at<double>(1,0), R.at<double>(1,1), R.at<double>(1,2), t.at<double>(1,0),
+//            R.at<double>(2,0), R.at<double>(2,1), R.at<double>(2,2), t.at<double>(2,0);
+//
+//    for (size_t i = 0; i < vpts0.size(); i++)
+//    {
+//        Eigen::Matrix<double, 4, 4> SVDA;
+//
+//        SVDA.row(0) = vpts0[i].x*T00.row(2) - T00.row(0);
+//        SVDA.row(1) = vpts0[i].y*T00.row(2) - T00.row(1);
+//        SVDA.row(2) = vpts1[i].x*T01.row(2) - T01.row(0);
+//        SVDA.row(3) = vpts1[i].y*T01.row(2) - T01.row(1);
+//
+//        Eigen::Vector4d SVDV = Eigen::JacobiSVD<Eigen::MatrixXd>(SVDA, Eigen::ComputeThinV).matrixV().rightCols<1>();
+//
+//        SVDV = SVDV/SVDV[3];
+//
+//        vpoints.emplace_back(cv::Point3d(SVDV[0], SVDV[1], SVDV[2]));
+//    }
 }
 
 vector<KeyFrame *> Map::GetAllKeyFrames()

@@ -2,10 +2,15 @@
 // Created by rain on 17-9-18.
 //
 
-#include <chrono>
 
 #ifndef RAIN_VIO_TICTOC_H
 #define RAIN_VIO_TICTOC_H
+
+#include <chrono>
+
+namespace RAIN_VIO
+{
+
 
 class TicTOC
 {
@@ -34,6 +39,7 @@ private:
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
-};
+}; // class TicTOC
 
+} // namespace RAIN_VIO
 #endif //RAIN_VIO_TICTOC_H

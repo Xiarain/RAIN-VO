@@ -123,7 +123,7 @@ void Optimizer::ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap)
 
     for (auto &MapPoint : pMap->mlMapPoints)
     {
-        MapPoint.mnUsedNum = MapPoint.mvFeaturePerFrame.size();
+        MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
 
         if (!(MapPoint.mdEstimatedDepth > 0))
             continue;
@@ -152,7 +152,54 @@ void Optimizer::ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap)
     }
     cost *= 0.5;
 
-    cout << "Frame ID: " << pFrame->GetFrameID() << " idx in slide window: " << IdxWin << " cost: " << cost << endl;
+    cout << " Frame ID: " << pFrame->GetFrameID() << " idx in slide window: " << IdxWin << " cost: " << cost << endl;
+    cout << " residuals number: " << idx << endl
+         << " Final RMSE: " << sqrt(cost/idx) << endl;
+}
+
+
+void Optimizer::ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap, Camera *pCamera)
+{
+    double cost=0;
+    vector<Eigen::Vector2d> vresiduals;
+
+    vresiduals.resize(pFrame->mvFraPointsPts.size());
+
+    Eigen::Vector3d Point3dw;
+    Eigen::Vector3d Point3dw1;
+
+    size_t idx=0;
+
+    for (auto &MapPoint : pMap->mlMapPoints)
+    {
+        MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
+
+        if (!(MapPoint.mdEstimatedDepth > 0))
+            continue;
+
+        if ((MapPoint.mnUsedNum >= 2 && MapPoint.mnStartFrame < gWindowSize-1 && MapPoint.mnStartFrame <= IdxWin && MapPoint.EndFrame() >= IdxWin))
+        {
+            FeaturePerFrame featurePerFrame = MapPoint.mvFeaturePerFrame.at((size_t)(IdxWin-MapPoint.mnStartFrame));
+
+            Eigen::Vector2d point2destimate= pCamera->World2Pixel(MapPoint.mPoint3d, Eigen::Quaterniond(pFrame->GetRotationInverse()), pFrame->GetTranslationInverse());
+
+            vresiduals[idx] = point2destimate - pCamera->Camera2Pixel(featurePerFrame.Point);
+
+            idx++;
+        }
+    }
+
+    vresiduals.resize(idx);
+
+    for (auto residul:vresiduals)
+    {
+        cost += (residul[0]*residul[0] + residul[1]*residul[1]);
+    }
+    cost *= 0.5;
+
+    cout << "-Frame ID: " << pFrame->GetFrameID() << " idx in slide window: " << IdxWin << " cost: " << cost << endl;
+    cout << " residuals number: " << idx << endl
+         << " RMSE: " << sqrt(cost/idx) << endl;
 }
 
 } // namespace RAIN_VIO

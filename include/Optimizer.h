@@ -19,6 +19,7 @@ namespace RAIN_VIO
 
 class Frame;
 class Map;
+class Camera;
 
 struct ReprojectionError2{
 
@@ -67,6 +68,8 @@ public:
     void static PoseOptimization(int IdxWin, Frame *pFrame, Map *pMap);
 
     void static ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap);
+
+    void static ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap, Camera *pCamera);
 
     Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
 

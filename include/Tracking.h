@@ -61,10 +61,11 @@ public:
     Feature *mpFeature;
     Viewer *mpViewer;
     MapDrawer *mpMapDrawer;
+    Frame *mpCurrentFrame;
 
     map<size_t, Frame *> mmpFrames;
 
-    Frame *mpCurrentFrame;
+
 
     eTrackingState etrackingState;
     eMarginFlag eMarginflag;
@@ -76,7 +77,6 @@ public:
     double ImageWidth;
 
     size_t mnFrameCount;
-    static const int mnWindowSize = 10;
     bool EQUALIZE;
 
     Tracking(const string &strSettingsFile, Map *pMap, MapDrawer *pMapDrawer);

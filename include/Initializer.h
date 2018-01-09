@@ -101,6 +101,7 @@ class GlobalSFM
 {
 public:
 
+    GlobalSFM(){};
     bool Construct(int FrameNum, Eigen::Quaterniond *Rqcw, Eigen::Vector3d *tcw, int l, const Eigen::Matrix3d RelativeR, const Eigen::Vector3d RealtiveT,
                     vector<SFMFeature> &vSFMFeature, map<int, Eigen::Vector3d> &SFMTrackedPoints);
 

@@ -6,6 +6,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include "TicToc.h"
 
 using namespace std;
 
@@ -20,6 +21,7 @@ int main ( int argc, char** argv )
     }
     cv::Mat img2 = cv::imread("../test/test_pnp/2.png", CV_LOAD_IMAGE_COLOR );
 
+    RAIN_VIO::TicTOC tictoc;
     std::vector<cv::KeyPoint> keypoints_1, keypoints_2;
     cv::Mat descriptors_1, descriptors_2;
     cv::Ptr<cv::FeatureDetector> detector = cv::ORB::create();
@@ -66,6 +68,11 @@ int main ( int argc, char** argv )
 
     cv::Mat img_match;
     cv::Mat img_goodmatch;
+
+    cout << "matches: " << matches.size() << endl;
+    cout << "good matche: " << good_matches.size() << endl;
+    cout << "times(ms): " << tictoc.toc() << endl;
+
 //    drawMatches ( img_1, keypoints_1, img_2, keypoints_2, matches, img_match );
     cv::drawMatches ( img1, keypoints_1, img2, keypoints_2, good_matches, img_goodmatch );
 //    imshow ( "所有匹配点对", img_match );

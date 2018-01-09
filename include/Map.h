@@ -57,9 +57,8 @@ public:
     Eigen::Vector3d mPoint3d;
     vector<FeaturePerFrame> mvFeaturePerFrame;
 
-    MapPoint(int _FeatureID, int _StartFrame)
-            : mnFeatureID(_FeatureID), mnStartFrame(_StartFrame),
-              mnUsedNum(0), mdEstimatedDepth(-1.0), mnFlag(0) {}
+    MapPoint(int _FeatureID, int _StartFrame) : mnFeatureID(_FeatureID), mnStartFrame(_StartFrame),
+                                                mnUsedNum(0), mdEstimatedDepth(-1.0), mnFlag(0) {}
 
     int EndFrame();
 
@@ -78,6 +77,8 @@ public:
 
     Map();
 
+    inline void SetCamera(Camera *pCamera) { mpCamera = pCamera;}
+
     bool AddFeatureCheckParallax(Frame *pFrame, const int FrameCount, const vector<pair<uint, Eigen::Vector3d>> & Features);
 
     double ComputeParallax(const MapPoint &mapPoint, int FrameCount);
@@ -92,13 +93,17 @@ public:
 
     void DebugShow();
 
-    void Triangulate(array<Frame *, mnWindowSize+1> *paFramesWin);
+    void Triangulate(array<Frame *, gWindowSize+1> *paFramesWin);
+
+    void Triangulate2(Frame *pCurrentFrame, array<Frame *, gWindowSize+1> *paFramesWin);
 
     vector<KeyFrame *> GetAllKeyFrames();
 
     vector<MapPoint *> GetAllMapPoints();
 
 protected:
+
+    Camera *mpCamera;
 
     mutex mMutexMap;
 

@@ -60,9 +60,11 @@ Tracking::Tracking(const string &strSettingsFile, Map *pMap,  MapDrawer *pMapDra
     LOG(INFO) << "- Image height: " << ImageHeight << endl;
     LOG(INFO) << "- Image width: " << ImageWidth << endl;
 
-    mpInitializer = new Initializer(CmaeraK, mpMap, mnWindowSize);
+    mpInitializer = new Initializer(CmaeraK, mpMap, gWindowSize);
     mpCamera = new Camera(strSettingsFile);
-    mpFeature = new Feature(mpCamera, strSettingsFile, mnWindowSize);
+    mpFeature = new Feature(mpCamera, strSettingsFile, gWindowSize);
+
+    mpMap->SetCamera(mpCamera);
 }
 
 Tracking::~Tracking()
@@ -73,7 +75,7 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 {
     vector<pair<int, Eigen::Vector3d>> Features;
 
-    mpCurrentFrame = new Frame(mpCamera, mpFeature, mstrSettingsFile, mnWindowSize);
+    mpCurrentFrame = new Frame(mpCamera, mpFeature, mstrSettingsFile, gWindowSize);
 
     mRawImage = image.clone();
 
@@ -97,7 +99,7 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
 
     if (etrackingState == NOINITIALIZED)
     {
-        if (mnFrameCount == mnWindowSize)
+        if (mnFrameCount == gWindowSize)
         {
             if (InitialStructure())
             {
@@ -112,19 +114,21 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
     {
 
-        TrackReferenceKeyFrame();
+//        TrackReferenceKeyFrame();
         TrackReferenceKeyFrame2();
 //
-//        mpMap->Triangulate(&maFramesWin);
-//
-//        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap);
-//        Optimizer::ComputeReprojectionCost(5, maFramesWin.at(5), mpMap);
+        mpMap->Triangulate(&maFramesWin);
 
 //        Optimizer::PoseOptimization(mnFrameCount, mpCurrentFrame ,mpMap);
+//
+        Optimizer::ComputeReprojectionCost(mnFrameCount, mpCurrentFrame ,mpMap, mpCamera);
+//        Optimizer::ComputeReprojectionCost(5, maFramesWin.at(5), mpMap);
 
 //        mpMapDrawer->SetCurrentCameraPose(mpCurrentFrame->GetPose());
 
-         SlideWindow();
+//        mpMap->DebugShow();
+
+          SlideWindow();
     }
 
     cv::waitKey(0);
@@ -140,15 +144,15 @@ void Tracking::SlideWindow()
 {
     if (eMarginflag == MARGINOLD) // remove the frame 0
     {
-        if (mnFrameCount == mnWindowSize)
+        if (mnFrameCount == gWindowSize)
         {
             // move the number 0 array to the number N array
-            for (int i = 0; i < mnWindowSize; i++)
+            for (int i = 0; i < gWindowSize; i++)
             {
                 swap(maFramesWin.at(i), maFramesWin.at(i+1));
             }
 
-            maFramesWin.at(mnWindowSize) = maFramesWin.at(mnWindowSize-1);
+            maFramesWin.at(gWindowSize) = maFramesWin.at(gWindowSize-1);
 
 //            size_t Frame0ID = maFramesWin.at(0)->GetFrameID();
 //
@@ -163,9 +167,9 @@ void Tracking::SlideWindow()
     }
     else
     {
-        if (mnFrameCount == mnWindowSize) // remove the frame N-1
+        if (mnFrameCount == gWindowSize) // remove the frame N-1
         {
-            swap(maFramesWin.at(mnWindowSize-1), maFramesWin.at(mnWindowSize));
+            swap(maFramesWin.at(gWindowSize-1), maFramesWin.at(gWindowSize));
 
             mpMap->RemoveFront(mnFrameCount);
         }
@@ -213,7 +217,7 @@ bool Tracking::InitialStructure()
 
     GlobalSFM GSFM;
 
-    if (!GSFM.Construct(mnFrameCount+1, Rqcw, tcw, l, RelativeR, RelativeT, vSFMFeature, mSFMPoint3d))
+    if (!GSFM.Construct((int)mnFrameCount+1, Rqcw, tcw, l, RelativeR, RelativeT, vSFMFeature, mSFMPoint3d))
     {
         LOG(ERROR) << "global SFM failed " << endl;
         eMarginflag = MARGINOLD;
@@ -221,7 +225,7 @@ bool Tracking::InitialStructure()
     }
 
     // the set the pose of the keyframes in the slide window
-    for (int i = 0; i < mnFrameCount+1; i++)
+    for (size_t i = 0; i < mnFrameCount+1; i++)
     {
         maFramesWin.at(i)->SetPose(Rqcw[i], tcw[i]);
         KeyFrame * pKF = new KeyFrame(maFramesWin.at(i), mpMap);
@@ -252,7 +256,6 @@ bool Tracking::TrackReferenceKeyFrame()
     vector<cv::Point2f> vPoint2d;
     vector<cv::Point3f> vPoint3d;
 
-    // TODO the MapPoint should build a reverse file
     for (auto &MapPoint : mpMap->mlMapPoints)
     {
         MapPoint.mnUsedNum = (int)MapPoint.mvFeaturePerFrame.size();
@@ -328,7 +331,7 @@ bool Tracking::TrackReferenceKeyFrame2()
 
     vFeaturePerFrame.assign(mpCurrentFrame->mvFeaturePerFrame.begin(), mpCurrentFrame->mvFeaturePerFrame.end());
 
-    for (auto &featurePerFrame:vFeaturePerFrame)
+    for (auto &featurePerFrame : vFeaturePerFrame)
     {
         if (featurePerFrame.mpInvertMapPoint->mnUsedNum <= 2)
             continue;
@@ -345,8 +348,8 @@ bool Tracking::TrackReferenceKeyFrame2()
     cv::Mat R, rvec, t, D, K;
 
     K = (cv::Mat_<double>(3, 3) << 1.0, 0, 0,
-            0, 1.0, 0,
-            0, 0, 1.0);
+                                   0, 1.0, 0,
+                                   0, 0, 1.0);
 
     if (!cv::solvePnP(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false))
     {
@@ -371,8 +374,8 @@ bool Tracking::TrackReferenceKeyFrame2()
         mpCurrentFrame->SetPoseInverse(Twc);
     }
 
-    cout << mpCurrentFrame->GetTranslation().transpose() << endl;
-    cout << Converter::toEuler(mpCurrentFrame->GetRotation()).transpose() << endl;
+    cout << mpCurrentFrame->GetTranslationInverse().transpose() << endl;
+    cout << Converter::toEuler(mpCurrentFrame->GetRotationInverse()).transpose() << endl;
 
     return true;
 }
