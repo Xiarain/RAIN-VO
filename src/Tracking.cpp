@@ -114,8 +114,8 @@ void Tracking::Track(const cv::Mat &image, const double &TimeStamps)
     else
     {
 
-//        TrackReferenceKeyFrame();
-        TrackReferenceKeyFrame2();
+        TrackReferenceKeyFrame();
+//        TrackReferenceKeyFrame2();
 //
         mpMap->Triangulate(&maFramesWin);
 
@@ -293,7 +293,8 @@ bool Tracking::TrackReferenceKeyFrame()
                                    0, 1.0, 0,
                                    0, 0, 1.0);
 
-    if (!cv::solvePnP(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false))
+    vector<int> inliers;
+    if (!cv::solvePnPRansac(vPoint3d, vPoint2d, K, cv::Mat(), rvec, t, false, 100, 4.0, 0.99, inliers))
     {
         LOG(ERROR) << " failed in solving the PnP problem " << endl;
         return false;

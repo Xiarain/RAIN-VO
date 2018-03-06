@@ -71,11 +71,11 @@ public:
 
     void static ComputeReprojectionCost(int IdxWin, Frame *pFrame, Map *pMap, Camera *pCamera);
 
-    Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
+    static Eigen::Vector2d ReprojectionError(const ceres::Problem& problem, ceres::ResidualBlockId id);
 
-    std::vector<double> GetReprojectionErrorNorms(const ceres::Problem& problem);
+    static std::vector<double> GetReprojectionErrorNorms(const ceres::Problem& problem);
 
-    void RemoveOutliers(ceres::Problem& problem, double threshold);
+    void static RemoveOutliers(ceres::Problem& problem, double threshold);
 
 }; // class Optimizer
 

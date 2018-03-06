@@ -8,6 +8,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
+#include <Optimizer.h>
 
 #include "pose_local_parameterization.h"
 
@@ -17,7 +18,7 @@ cv::Point2d pixel2cam(const cv::Point2d& p, const cv::Mat& K);
 void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
                         vector<cv::KeyPoint>& vKeyPoints1, vector<cv::KeyPoint>& vKeyPoints2,
                         vector<cv::DMatch>& vmatches);
-void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
+void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d1, vector<cv::Point2d> vPoints2d2,
                       cv::Mat& K, cv::Mat& R, cv::Mat& t);
 
 void ComputeReprojectionCost(const vector<cv::Point3d> vPoints3d, const vector<cv::Point2d> vPoints2d,
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 
         cout << se3updated.log().transpose() << endl;
         cout << SE3Rt.log().transpose()  << endl;
-        cout << se3updated << endl;
+//        cout << se3updated << endl;
     }
 
     const string strimg1FilePath = "../test/test_pnp/1.png";
@@ -66,7 +67,8 @@ int main(int argc, char* argv[])
     cv::Mat K = (cv::Mat_<double> (3, 3) << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1);
 
     vector<cv::Point3d> vpts3d;
-    vector<cv::Point2d> vpts2d;
+    vector<cv::Point2d> vpts2d1;
+    vector<cv::Point2d> vpts2d2;
 
     for (auto m:vmatches)
     {
@@ -80,18 +82,19 @@ int main(int argc, char* argv[])
         float dd = d/1000.0;
         cv::Point2d p1 = pixel2cam(vkeypoints1[m.queryIdx].pt, K);
         vpts3d.push_back(cv::Point3d(p1.x*dd, p1.y*dd, dd));
-        vpts2d.push_back(vkeypoints2[m.trainIdx].pt);
+        vpts2d1.push_back(vkeypoints1[m.queryIdx].pt);
+        vpts2d2.push_back(vkeypoints2[m.trainIdx].pt);
     }
 
     cv::Mat r, t;
-    cv::solvePnP(vpts3d, vpts2d, K, cv::Mat(), r, t, false);
+    cv::solvePnP(vpts3d, vpts2d2, K, cv::Mat(), r, t, false);
 
     cv::Mat R;
     cv::Rodrigues(r, R);
 
-    PoseOptimization(vpts3d, vpts2d, K, R, t);
+    PoseOptimization(vpts3d, vpts2d1, vpts2d2, K, R, t);
 
-    ComputeReprojectionCost(vpts3d, vpts2d, K, R, t);
+    ComputeReprojectionCost(vpts3d, vpts2d2, K, R, t);
 
     while (1)
     {
@@ -149,47 +152,74 @@ void FindFeatureMatches(const cv::Mat& imag1, const cv::Mat& imag2,
     }
 }
 
-void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d,
+void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints2d1, vector<cv::Point2d> vPoints2d2,
                       cv::Mat& K, cv::Mat& R, cv::Mat& t)
 {
     cv::Mat intrinsic(cv::Matx41d(K.at<double>(0, 0), K.at<double>(1, 1), K.at<double>(0, 2), K.at<double>(1, 2)));
 
-    cv::Mat extrinsic(7, 1, CV_64FC1);
+    cv::Mat extrinsic2(7, 1, CV_64FC1);
+    cv::Mat extrinsic1(7, 1, CV_64FC1);
 
     {
         Eigen::Matrix3d Reigen;
         cv::cv2eigen(R, Reigen);
         Eigen::Quaterniond Rq(Reigen);
 
-        extrinsic.ptr<double>()[0] = Rq.x();
-        extrinsic.ptr<double>()[1] = Rq.y();
-        extrinsic.ptr<double>()[2] = Rq.z();
-        extrinsic.ptr<double>()[3] = Rq.w();
-        t.copyTo(extrinsic.rowRange(4, 7));
+        extrinsic2.ptr<double>()[0] = Rq.x();
+        extrinsic2.ptr<double>()[1] = Rq.y();
+        extrinsic2.ptr<double>()[2] = Rq.z();
+        extrinsic2.ptr<double>()[3] = Rq.w();
+        t.copyTo(extrinsic2.rowRange(4, 7));
+
+        Eigen::Quaterniond Rq1 = Eigen::Quaterniond::Identity();
+        Eigen::Vector3d t1;
+        t1.setZero();
+        extrinsic1.ptr<double>()[0] = Rq1.x();
+        extrinsic1.ptr<double>()[1] = Rq1.y();
+        extrinsic1.ptr<double>()[2] = Rq1.z();
+        extrinsic1.ptr<double>()[3] = Rq1.w();
+        extrinsic1.ptr<double>()[4] = t1[0];
+        extrinsic1.ptr<double>()[5] = t1[1];
+        extrinsic1.ptr<double>()[6] = t1[2];
+
     }
 
-    cout << "extrinsic: " << endl << extrinsic.t() << endl;
+    cout << "extrinsic1: " << endl << extrinsic1.t() << endl;
+    cout << "extrinsic2: " << endl << extrinsic2.t() << endl;
 
     ceres::Problem problem;
 
-    problem.AddParameterBlock(extrinsic.ptr<double>(), 7, new PoseLocalParameterization());
-
+    problem.AddParameterBlock(extrinsic1.ptr<double>(), 7, new PoseLocalParameterization());
+    problem.AddParameterBlock(extrinsic2.ptr<double>(), 7, new PoseLocalParameterization());
+    problem.SetParameterBlockConstant(extrinsic1.ptr<double>());
 
     ceres::LossFunction* lossfunction = new ceres::HuberLoss(4);   // loss function make bundle adjustment robuster.
 
     for (int i = 0; i < vPoints3d.size(); i++)
     {
-        cv::Point2d observed = vPoints2d[i];
+        cv::Point2d observed1 = vPoints2d1[i];
+        cv::Point2d observed2 = vPoints2d2[i];
 
         ceres::CostFunction* costfunction = new ReprojectionErrorSE3(K.at<double>(0, 0), K.at<double>(1, 1),
                                                                      K.at<double>(0, 2), K.at<double>(1, 2),
-                                                                     observed.x, observed.y);
+                                                                     observed1.x, observed1.y);
 
-        problem.AddResidualBlock(
-                costfunction, lossfunction,
-                extrinsic.ptr<double>(), &vPoints3d[i].x);
+        ceres::CostFunction* costfunction2 = new ReprojectionErrorSE3(K.at<double>(0, 0), K.at<double>(1, 1),
+                                                                      K.at<double>(0, 2), K.at<double>(1, 2),
+                                                                      observed2.x, observed2.y);
+
+        problem.AddResidualBlock(costfunction, lossfunction, extrinsic1.ptr<double>(), &vPoints3d[i].x);
+        problem.AddResidualBlock(costfunction2, lossfunction, extrinsic2.ptr<double>(), &vPoints3d[i].x);
 
         problem.AddParameterBlock(&vPoints3d[i].x, 3);
+    }
+
+    vector<double> vresiduals;
+    vresiduals = RAIN_VIO::Optimizer::GetReprojectionErrorNorms(problem);
+
+    for (auto residual : vresiduals)
+    {
+        cout << residual << endl;
     }
 
     ceres::Solver::Options options;
@@ -213,7 +243,15 @@ void PoseOptimization(vector<cv::Point3d> vPoints3d, vector<cv::Point2d> vPoints
              << " Final RMSE: " << sqrt(summary.final_cost / summary.num_residuals) << endl
              << " Time (s): " << summary.total_time_in_seconds << endl;
 
-        cout << extrinsic.t() << endl;
+        cout << "extrinsic1: " << endl << extrinsic1.t() << endl;
+        cout << "extrinsic2: " << endl << extrinsic2.t() << endl;
+    }
+
+    vresiduals = RAIN_VIO::Optimizer::GetReprojectionErrorNorms(problem);
+
+    for (auto residual : vresiduals)
+    {
+        cout << residual << endl;
     }
 } // void PoseOptimization()
 
